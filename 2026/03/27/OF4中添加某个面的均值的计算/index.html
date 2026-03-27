@@ -1,0 +1,284 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>OF4中添加某个面的均值的计算 | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="0.OF4 中添加计算某个面的平均速度等值的方法。123456789101112131415161718192021patchAvgU&#123;     type            surfaceRegion;     libs            (&quot;libfieldFunctionObjects.so&quot;);     writeControl    writeTime">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OF4中添加某个面的均值的计算">
+<meta property="og:url" content="http://example.com/2026/03/27/OF4%E4%B8%AD%E6%B7%BB%E5%8A%A0%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%9D%87%E5%80%BC%E7%9A%84%E8%AE%A1%E7%AE%97/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="0.OF4 中添加计算某个面的平均速度等值的方法。123456789101112131415161718192021patchAvgU&#123;     type            surfaceRegion;     libs            (&quot;libfieldFunctionObjects.so&quot;);     writeControl    writeTime">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-03-27T20:52:07.000Z">
+<meta property="article:modified_time" content="2026-03-27T20:52:18.899Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="OpenFOAM4">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "OF4中添加某个面的均值的计算",
+  "url": "http://example.com/2026/03/27/OF4%E4%B8%AD%E6%B7%BB%E5%8A%A0%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%9D%87%E5%80%BC%E7%9A%84%E8%AE%A1%E7%AE%97/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-03-27T20:52:07.000Z",
+  "dateModified": "2026-03-27T20:52:18.899Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/03/27/OF4%E4%B8%AD%E6%B7%BB%E5%8A%A0%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%9D%87%E5%80%BC%E7%9A%84%E8%AE%A1%E7%AE%97/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'OF4中添加某个面的均值的计算',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">OF4中添加某个面的均值的计算</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">OF4中添加某个面的均值的计算</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-03-27T20:52:07.000Z" title="发表于 2026-03-27 21:52:07">2026-03-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-03-27T20:52:18.899Z" title="更新于 2026-03-27 21:52:18">2026-03-27</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h2 id="0-OF4-中添加计算某个面的平均速度等值的方法。"><a href="#0-OF4-中添加计算某个面的平均速度等值的方法。" class="headerlink" title="0.OF4 中添加计算某个面的平均速度等值的方法。"></a>0.OF4 中添加计算某个面的平均速度等值的方法。</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">patchAvgU</span><br><span class="line">&#123;</span><br><span class="line">     type            surfaceRegion;</span><br><span class="line">     <span class="built_in">libs</span>            (<span class="string">&quot;libfieldFunctionObjects.so&quot;</span>);</span><br><span class="line">     writeControl    writeTime;</span><br><span class="line">     log             <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">     <span class="comment">// 核心修正点：必须显式告诉它是否写入面场数据</span></span><br><span class="line">     writeFields     <span class="literal">false</span>; </span><br><span class="line">     surfaceFormat   null;  <span class="comment">// 如果不需要导出面几何，设为 null</span></span><br><span class="line"></span><br><span class="line">     regionType      patch;</span><br><span class="line">     name            outlet; <span class="comment">// 确保这个名字在 constant/polyMesh/boundary 中存在</span></span><br><span class="line"></span><br><span class="line">     operation       areaAverage; </span><br><span class="line">     </span><br><span class="line">     <span class="built_in">fields</span></span><br><span class="line">     (</span><br><span class="line">          U</span><br><span class="line">     );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="Paraview中验证"><a href="#Paraview中验证" class="headerlink" title="Paraview中验证"></a>Paraview中验证</h2><p>在 ParaView 中计算某个平面的平均速度，通常分为<strong>截取平面</strong>、<strong>整合数据</strong>和<strong>计算平均</strong>三个步骤。</p>
+<p>以下是标准的操作流程：</p>
+<h3 id="1-截取目标平面-Slice-或-Extract-Block"><a href="#1-截取目标平面-Slice-或-Extract-Block" class="headerlink" title="1. 截取目标平面 (Slice 或 Extract Block)"></a>1. 截取目标平面 (Slice 或 Extract Block)</h3><p>首先，你需要确定要计算哪里的平均速度：</p>
+<ul>
+<li><strong>如果是内部截面</strong>：点击工具栏的 <strong>Slice</strong> 按钮（切片），调整平面位置。</li>
+<li><strong>如果是边界（如 Outlet）</strong>：在左侧 Pipeline Browser 选中你的 <code>.foam</code> 文件，在 Properties 面板的 <strong>Mesh Regions</strong> 中只勾选 <code>outlet</code>，或者使用 <strong>Extract Block</strong> 过滤器选中该边界。</li>
+</ul>
+<h3 id="2-计算速度矢量的大小-可选"><a href="#2-计算速度矢量的大小-可选" class="headerlink" title="2. 计算速度矢量的大小 (可选)"></a>2. 计算速度矢量的大小 (可选)</h3><p>如果你想计算的是速度的大小（Scalar）而不是矢量（Vector）的分量平均值：</p>
+<ol>
+<li>选中 Slice 或边界，点击 <strong>Calculator</strong> 过滤器。</li>
+<li>在 Result Array Name 输入 <code>magU</code>。</li>
+<li>在表达式框输入 <code>mag(U)</code>。</li>
+<li>点击 <strong>Apply</strong>。</li>
+</ol>
+<h3 id="3-使用整合过滤器-Integrate-Variables"><a href="#3-使用整合过滤器-Integrate-Variables" class="headerlink" title="3. 使用整合过滤器 (Integrate Variables)"></a>3. 使用整合过滤器 (Integrate Variables)</h3><p>这是最关键的一步，用于计算面积分：</p>
+<ol>
+<li>选中你的 Slice（或刚才的 Calculator）。</li>
+<li>点击菜单栏 <strong>Filters -&gt; Alphabetical -&gt; Integrate Variables</strong>。</li>
+<li>点击 <strong>Apply</strong>。</li>
+<li>此时会弹出一个表格（SpreadSheet View）。</li>
+</ol>
+<h3 id="4-计算最终平均值"><a href="#4-计算最终平均值" class="headerlink" title="4. 计算最终平均值"></a>4. 计算最终平均值</h3><p>在弹出的表格中，你会看到很多数据。请按以下公式换算：</p>
+<table>
+<thead>
+<tr>
+<th><strong>目标值</strong></th>
+<th><strong>表格中的列名</strong></th>
+<th><strong>计算方法</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>总面积</strong></td>
+<td><code>Area</code></td>
+<td>直接读取该列的值</td>
+</tr>
+<tr>
+<td><strong>面平均速度 (矢量分量)</strong></td>
+<td><code>U</code></td>
+<td>$\text{Average } U_y &#x3D; \frac{\text{表格中的 } U_y}{\text{Area}}$</td>
+</tr>
+<tr>
+<td><strong>面平均速率 (标量大小)</strong></td>
+<td><code>magU</code></td>
+<td>$\text{Average Speed} &#x3D; \frac{\text{表格中的 } magU}{\text{Area}}$</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>注意</strong>：<code>Integrate Variables</code> 实际上计算的是 $\int U , dA$。为了得到平均值 $\bar{U} &#x3D; \frac{\int U , dA}{\int dA}$，你<strong>必须</strong>手动用结果除以面积 <code>Area</code>。</p>
+</blockquote>
+<hr>
+<h3 id="进阶技巧：直接在-ParaView-里显示结果"><a href="#进阶技巧：直接在-ParaView-里显示结果" class="headerlink" title="进阶技巧：直接在 ParaView 里显示结果"></a>进阶技巧：直接在 ParaView 里显示结果</h3><p>如果你不想手动除以面积，可以使用 <strong>Python Calculator</strong>：</p>
+<ol>
+<li>选中 Slice。</li>
+<li>添加 <strong>Python Calculator</strong> 过滤器。</li>
+<li>在 <strong>Expression</strong> 框输入：<code>sum(U)/sum(Area)</code>（计算矢量平均）或 <code>sum(mag(U))/sum(Area)</code>（计算标量平均）。</li>
+<li><strong>Array Association</strong> 选择 <code>Row Data</code>。</li>
+<li>点击 <strong>Apply</strong>，结果会直接显示在表格里。</li>
+</ol>
+<hr>
+<p><strong>对比建议：</strong></p>
+<p>你之前通过 OpenFOAM <code>controlDict</code> 得到的 <code>areaAverage(U)</code> 是最准确的，因为它直接利用了求解器的原始离散格式。ParaView 的计算结果可能会因为插值（Slice 时的插值）产生微小的数值差异。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/03/27/OF4%E4%B8%AD%E6%B7%BB%E5%8A%A0%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%9D%87%E5%80%BC%E7%9A%84%E8%AE%A1%E7%AE%97/">http://example.com/2026/03/27/OF4%E4%B8%AD%E6%B7%BB%E5%8A%A0%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%9D%87%E5%80%BC%E7%9A%84%E8%AE%A1%E7%AE%97/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/OpenFOAM4/">OpenFOAM4</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/03/27/OF4%E4%B8%ADthermophysicalProperties%E7%9A%84%E8%AE%BE%E7%BD%AE%E4%BB%A5%E5%8F%8A%E5%A4%9A%E7%BB%84%E5%88%86%E7%9A%84%E6%B0%94%E4%BD%93%E7%9A%84%E8%AE%BE%E7%BD%AE/" title="OF4中thermophysicalProperties的设置以及多组分的气体的设置"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OF4中thermophysicalProperties的设置以及多组分的气体的设置</div></div><div class="info-2"><div class="info-item-1">今天在搞一个项目中的关于气体成分的设置    Gas composition      H2 Vol% 31.48   N2 Vol% 0.15   CH4 Vol% 3.2   CO2 Vol% 18.80   CO Vol% 46.1   C2H6 Vol% 0.1   C2H2 Vol% 0.14   C3H8 Vol% 0.03   Gas yield Nm3&#x2F;h 25   Density kg&#x2F;m3 0.94             下面是在REFPROP中按照当前的组分设置的混合物的到的热物性，用作参考和对比。  thermophysicalProperties文件的设置根据你的solver支持的情况，可以使用banana大法，看一下你的ThermoType都支持什么配置。我支持如下配置 123456789101112131415161718192021222324252627282930313233343536type         mixture                    transport   thermo       equa...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/03/27/OF4%E4%B8%ADthermophysicalProperties%E7%9A%84%E8%AE%BE%E7%BD%AE%E4%BB%A5%E5%8F%8A%E5%A4%9A%E7%BB%84%E5%88%86%E7%9A%84%E6%B0%94%E4%BD%93%E7%9A%84%E8%AE%BE%E7%BD%AE/" title="OF4中thermophysicalProperties的设置以及多组分的气体的设置"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-27</div><div class="info-item-2">OF4中thermophysicalProperties的设置以及多组分的气体的设置</div></div><div class="info-2"><div class="info-item-1">今天在搞一个项目中的关于气体成分的设置    Gas composition      H2 Vol% 31.48   N2 Vol% 0.15   CH4 Vol% 3.2   CO2 Vol% 18.80   CO Vol% 46.1   C2H6 Vol% 0.1   C2H2 Vol% 0.14   C3H8 Vol% 0.03   Gas yield Nm3&#x2F;h 25   Density kg&#x2F;m3 0.94             下面是在REFPROP中按照当前的组分设置的混合物的到的热物性，用作参考和对比。  thermophysicalProperties文件的设置根据你的solver支持的情况，可以使用banana大法，看一下你的ThermoType都支持什么配置。我支持如下配置 123456789101112131415161718192021222324252627282930313233343536type         mixture                    transport   thermo       equa...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">5</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0-OF4-%E4%B8%AD%E6%B7%BB%E5%8A%A0%E8%AE%A1%E7%AE%97%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%B9%B3%E5%9D%87%E9%80%9F%E5%BA%A6%E7%AD%89%E5%80%BC%E7%9A%84%E6%96%B9%E6%B3%95%E3%80%82"><span class="toc-number">1.</span> <span class="toc-text">0.OF4 中添加计算某个面的平均速度等值的方法。</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Paraview%E4%B8%AD%E9%AA%8C%E8%AF%81"><span class="toc-number">2.</span> <span class="toc-text">Paraview中验证</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E6%88%AA%E5%8F%96%E7%9B%AE%E6%A0%87%E5%B9%B3%E9%9D%A2-Slice-%E6%88%96-Extract-Block"><span class="toc-number">2.1.</span> <span class="toc-text">1. 截取目标平面 (Slice 或 Extract Block)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E8%AE%A1%E7%AE%97%E9%80%9F%E5%BA%A6%E7%9F%A2%E9%87%8F%E7%9A%84%E5%A4%A7%E5%B0%8F-%E5%8F%AF%E9%80%89"><span class="toc-number">2.2.</span> <span class="toc-text">2. 计算速度矢量的大小 (可选)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E4%BD%BF%E7%94%A8%E6%95%B4%E5%90%88%E8%BF%87%E6%BB%A4%E5%99%A8-Integrate-Variables"><span class="toc-number">2.3.</span> <span class="toc-text">3. 使用整合过滤器 (Integrate Variables)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-%E8%AE%A1%E7%AE%97%E6%9C%80%E7%BB%88%E5%B9%B3%E5%9D%87%E5%80%BC"><span class="toc-number">2.4.</span> <span class="toc-text">4. 计算最终平均值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%9B%E9%98%B6%E6%8A%80%E5%B7%A7%EF%BC%9A%E7%9B%B4%E6%8E%A5%E5%9C%A8-ParaView-%E9%87%8C%E6%98%BE%E7%A4%BA%E7%BB%93%E6%9E%9C"><span class="toc-number">2.5.</span> <span class="toc-text">进阶技巧：直接在 ParaView 里显示结果</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/27/OF4%E4%B8%AD%E6%B7%BB%E5%8A%A0%E6%9F%90%E4%B8%AA%E9%9D%A2%E7%9A%84%E5%9D%87%E5%80%BC%E7%9A%84%E8%AE%A1%E7%AE%97/" title="OF4中添加某个面的均值的计算">OF4中添加某个面的均值的计算</a><time datetime="2026-03-27T20:52:07.000Z" title="发表于 2026-03-27 21:52:07">2026-03-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/27/OF4%E4%B8%ADthermophysicalProperties%E7%9A%84%E8%AE%BE%E7%BD%AE%E4%BB%A5%E5%8F%8A%E5%A4%9A%E7%BB%84%E5%88%86%E7%9A%84%E6%B0%94%E4%BD%93%E7%9A%84%E8%AE%BE%E7%BD%AE/" title="OF4中thermophysicalProperties的设置以及多组分的气体的设置">OF4中thermophysicalProperties的设置以及多组分的气体的设置</a><time datetime="2026-03-27T20:29:04.000Z" title="发表于 2026-03-27 21:29:04">2026-03-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/20/OF%E4%B8%AD%E7%9A%84Constructors%E4%B8%AD%E7%9A%84%E4%B8%A4%E4%B8%AAfunction%E7%9A%84%E6%84%8F%E4%B9%89/" title="OF中的Constructors中的两个function的意义">OF中的Constructors中的两个function的意义</a><time datetime="2026-03-20T08:57:06.000Z" title="发表于 2026-03-20 09:57:06">2026-03-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/12/%E5%9F%BA%E4%BA%8EOpenFOAM-4%E6%B7%BB%E5%8A%A0%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/" title="基于OpenFOAM-4添加数据类型">基于OpenFOAM-4添加数据类型</a><time datetime="2026-03-12T20:40:58.000Z" title="发表于 2026-03-12 21:40:58">2026-03-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/11/macOS%E4%B8%AD%E4%BD%BF%E7%94%A8vscode%E6%89%93%E5%BC%80%E6%97%A0%E6%89%A9%E5%B1%95%E5%90%8D%E6%96%87%E4%BB%B6/" title="macOS中使用vscode打开无扩展名文件">macOS中使用vscode打开无扩展名文件</a><time datetime="2026-03-11T20:16:15.000Z" title="发表于 2026-03-11 21:16:15">2026-03-11</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || 'b93168f2f0557c4b85f0848e969ce46d'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
