@@ -1,0 +1,324 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>OpenFOAM 中的壁面函数（一） | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="OpenFOAM中的壁面函数（一）转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 本系列来看看 OpenFOAM 中的壁面函数。壁面函数的本质，是边界条件。这里主要来看看壁面函数的基本原理，OpenFOAM 中实现了的壁面函数，以及选择壁面函数的一些参考依据。 1. 壁面函数的基本原理湍">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OpenFOAM 中的壁面函数（一）">
+<meta property="og:url" content="http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="OpenFOAM中的壁面函数（一）转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 本系列来看看 OpenFOAM 中的壁面函数。壁面函数的本质，是边界条件。这里主要来看看壁面函数的基本原理，OpenFOAM 中实现了的壁面函数，以及选择壁面函数的一些参考依据。 1. 壁面函数的基本原理湍">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-07-16T08:46:34.000Z">
+<meta property="article:modified_time" content="2026-07-16T08:49:18.286Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="其他">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "OpenFOAM 中的壁面函数（一）",
+  "url": "http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-07-16T08:46:34.000Z",
+  "dateModified": "2026-07-16T08:49:18.286Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'OpenFOAM 中的壁面函数（一）',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">OpenFOAM 中的壁面函数（一）</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">OpenFOAM 中的壁面函数（一）</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-16T08:49:18.286Z" title="更新于 2026-07-16 10:49:18">2026-07-16</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h1 id="OpenFOAM中的壁面函数（一）"><a href="#OpenFOAM中的壁面函数（一）" class="headerlink" title="OpenFOAM中的壁面函数（一）"></a>OpenFOAM中的壁面函数（一）</h1><p>转自：<a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/%EF%BC%8C%E4%BE%B5%E5%88%A0">https://xiaopingqiu.github.io/，侵删</a></p>
+<p>仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里</p>
+<p>本系列来看看 OpenFOAM 中的壁面函数。壁面函数的本质，是边界条件。这里主要来看看壁面函数的基本原理，OpenFOAM 中实现了的壁面函数，以及选择壁面函数的一些参考依据。</p>
+<h5 id="1-壁面函数的基本原理"><a href="#1-壁面函数的基本原理" class="headerlink" title="1. 壁面函数的基本原理"></a>1. 壁面函数的基本原理</h5><p>湍流模拟中，需要对近壁区域进行处理。一般来讲，壁面处理方法包含两类，一类是使用很细的网格，使靠近壁面的第一层网格在粘性层内（$y^+ &lt;1$），然后里可以直接解析到粘性层的低雷诺湍流模型；另一类，不直接解析粘性层，而是将第一层网格设置在对数区（$y^+&gt; 30$），然后用经验公式来将粘性层和对数区关联起来。下图是一个典型的壁面附近的 $U^+ \text{-} y^+$ 关系图。<br><a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/image/wallFunctions/Law_of_the_wall.png"><img src="/OpenFOAM%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/Law_of_the_wall.png" alt="壁面律"></a>壁面律<br>图片来自 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Law_of_the_wall">Wikipedia:Law of the wall </a>。<br>在粘性层，满足如下关系<br>$$<br>u^+ &#x3D; y^+<br>$$<br>而在对数区，则满足<br>$$<br>U^+ &#x3D; \frac{1}{\kappa}\ln(Ey^+)<br>$$<br>其中 $U^+ &#x3D; U&#x2F;u_\tau$， $y^+ &#x3D; yu_\tau&#x2F;\nu$， $u_\tau &#x3D; \sqrt{\tau_w&#x2F;\rho}$，$\kappa\approx 0.41$，$E \approx 9.8$，$y$ 表示与壁面的距离。</p>
+<p>本篇以标准壁面函数法来讨论一下壁面函数方法的基本原理，以及壁面函数在 OpenFOAM 中的实现。下面的讨论，先局限在 $k-\varepsilon$ 模型，且第一层网格在对数区的情形。<br>先来看一下壁面函数方法需要解决什么问题。<br>有限体积方法中，扩散项的离散可以表示如下：<br>$$<br>\nabla \cdot (\nu \nabla U) &#x3D; \sum_f \left [\nu_f \cdot (\nabla U)_f \right]<br>$$<br>当 $f$ 表示的是壁面边界单元时，这时就需要知道在壁面上的速度梯度 $(\nabla U)_f$。壁面上一般对速度 $U$ 采用无滑移条件，如何得到正确的壁面速度梯度，这就是一个问题。这个问题有两个解决思路，一是通过实验或者 DNS 模拟等，得到一条连续的 $U-y$ 曲线，然后从这个曲线求壁面上的导数 $dU&#x2F;dy$ 来得到壁面上的速度梯度；还有一种思路是，由于最终需要得到的是正确的 $\nu_f \cdot (\nabla U)_f$ ，即壁面上的剪应力，虽然<br>$$<br>\tau_w &#x3D; \nu \cdot \frac{\partial U}{\partial n}\left. \right|<em>w \neq \nu \frac{U_p-U_w}{y}<br>$$<br>其中 $U_p$ 表示第一层网格中心的速度，$U_w$ 表示壁面上的速度。<br>但是，可以构造一个壁面上的有效粘度 $\nu</em>{eff}$，以使下式成立<br>$$<br>\tau_w &#x3D; \nu \cdot \frac{\partial U}{\partial n} \left. \right |<em>w &#x3D; \nu</em>{eff} \frac{U_p-U_w}{y} &#x3D; (\nu + \nu_t ) \cdot \frac{U_p-U_w}{y}<br>$$</p>
+<p>后一种解决方法的好处是，不需要修改动量方程，直接使用 $\frac{U_p-U_w}{y}$ 来代替 $\frac{\partial U}{\partial n} \left. \right |_w $，然后通过设置合适的湍流粘度 $\nu_t$ 的边界条件来修正壁面应力 $\tau_w$。</p>
+<p>另一方面，在对数区，$k^+$ 是常数<br>$$<br>k^+ &#x3D; \frac{1}{\sqrt{C_\mu}} \<br>$$<br>其中 $k^+ &#x3D; k&#x2F;u_\tau^2$。<br>由<br>$$<br>k^+ &#x3D; \frac{1}{\sqrt{C_\mu}} &#x3D; k&#x2F;u_\tau^2<br>$$<br>得<br>$$<br>u_\tau &#x3D; C_\mu^{1&#x2F;4}k^{1&#x2F;2}<br>$$<br>于是<br>$$<br>\tau_w &#x3D; \rho u_\tau^2 &#x3D; \rho u_\tau \cdot \frac{U}{U^+} &#x3D; \frac{\rho u_\tau (U_p-U_w)}{\frac{1}{\kappa}\ln(Ey^+)}<br>$$<br>若令<br>$$<br>\nu_{eff} &#x3D; \frac{u_\tau y}{\frac{1}{\kappa}\ln(Ey^+)}<br>$$<br>则<br>$$<br>\tau_w &#x3D; \rho \nu_{eff}\cdot \frac{U_p-U_w}{y}<br>$$<br>这正是上文提到的第二种解决壁面速度问题的形式。<br>而<br>$$<br>\nu_{eff} &#x3D; \frac{ u_\tau y}{\frac{1}{\kappa}\ln(Ey^+)} &#x3D; \frac{ y^+ \nu}{\frac{1}{\kappa}\ln(Ey^+)} &#x3D; \nu + \nu_{tw}<br>$$<br>于是得到壁面上的湍流粘度为<br>$$<br>\nu_{tw} &#x3D; \nu \cdot \left(\frac{\kappa y^+}{\ln(Ey^+)} -1 \right)<br>$$</p>
+<p>$y^+$ 可以通过不同的方式来得到，具体的计算方法，见后文的 <code>nutWallFunctions</code> 部分。</p>
+<p>除了得到壁面上的等效湍流粘度，还需要计算靠近壁面第一层网格的湍动能生成和湍动能耗散项。</p>
+<p>湍动能生成项计算如下：<br>$$<br>G \approx \tau_w\cdot \frac{\partial (U_p -U_w)}{\partial y}<br>$$<br>由速度的壁面律<br>$$<br>U^+ &#x3D; \frac{U_p - U_w}{u_\tau} &#x3D; \frac{1}{\kappa}\ln(Ey^+) &#x3D; \frac{1}{\kappa} \ln(E\frac{yu_\tau}{\nu})<br>$$<br>注意，$G$ 求的是第一层网格内的值，所以，由<br>$$<br>U_p -U_w &#x3D; \frac{u_\tau}{\kappa} \ln(E\frac{yu_\tau}{\nu})<br>$$<br>可以求得第一层网格内的梯度<br>$$<br>\frac{\partial (U_p -U_w)}{\partial y} \left. \right|<em>p &#x3D; \frac{u</em>\tau}{\kappa y_p}<br>$$<br>于是<br>$$<br>G &#x3D; \tau_w \cdot \frac{u_\tau}{\kappa y_p}<br>$$<br>注意，这里的 $\frac{U_p-U_w}{d}$，其实是速度在壁面法向方向的梯度的近似值，这一点见上文 $\nu_t$ 的边界条件部分。</p>
+<p>再来看 $\varepsilon$，$\varepsilon$ 的计算基于第一层网格内的湍动生成与湍动能耗散项守恒的假设，即<br>$$<br>\rho \varepsilon_p &#x3D; G &#x3D; \tau_w \cdot \frac{u_\tau}{\kappa y_p} &#x3D;\rho\cdot \frac{u_\tau^3}{\kappa y_p}<br>$$<br>于是得<br>$$<br>\varepsilon_p &#x3D; \frac{u_\tau^3}{\kappa y_p} &#x3D; \frac{C_\mu^{3&#x2F;4}k_p^{3&#x2F;2}}{\kappa y_p}<br>$$</p>
+<p>至于 $k$，一般认为当第一层网格位于对数区时，不需要在壁面上对 $k$ 加任何限制，用零梯度边界条件即可。</p>
+<h5 id="2-在-OpenFOAM-中的实现"><a href="#2-在-OpenFOAM-中的实现" class="headerlink" title="2. 在 OpenFOAM 中的实现"></a>2. 在 OpenFOAM 中的实现</h5><p>在 OpenFOAM 中，$k$，$\varepsilon$ 和 $\nu_t$ 分别有对应的边界条件可以选择，壁面函数的实现是在这些边界条件里进行的。具体地说， <code>k***WallFunction</code> 用于指定 $k$ 的边界条件， <code>epsilon***WallFunction</code> 用于计算 $\varepsilon$ 和 $G$ 在第一层网格内的值， <code>nut***WallFunction</code> 用来计算 $\nu_t$ 在壁面上的值。 还有就是一个要关心的问题是这些边界条件的调用顺序，这需要通过湍流模型的一段代码来说明，以 <code>kEpsilon</code> 为例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">void kEpsilon::correct()</span><br><span class="line">&#123;</span><br><span class="line">    RASModel::correct();</span><br><span class="line">    if (!turbulence_)</span><br><span class="line">    &#123;</span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line">    volScalarField G(GName(), nut_*2*magSqr(symm(fvc::grad(U_))));</span><br><span class="line"></span><br><span class="line">    // Update epsilon and G at the wall</span><br><span class="line">    epsilon_.boundaryField().updateCoeffs();</span><br><span class="line"></span><br><span class="line">    // Dissipation equation</span><br><span class="line">    tmp&lt;fvScalarMatrix&gt; epsEqn</span><br><span class="line">    (</span><br><span class="line">        fvm::ddt(epsilon_)</span><br><span class="line">      + fvm::div(phi_, epsilon_)</span><br><span class="line">      - fvm::laplacian(DepsilonEff(), epsilon_)</span><br><span class="line">     ==</span><br><span class="line">        C1_*G*epsilon_/k_</span><br><span class="line">      - fvm::Sp(C2_*epsilon_/k_, epsilon_)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    epsEqn().relax();</span><br><span class="line">    epsEqn().boundaryManipulate(epsilon_.boundaryField());</span><br><span class="line"></span><br><span class="line">    solve(epsEqn);</span><br><span class="line">    bound(epsilon_, epsilonMin_);</span><br><span class="line"></span><br><span class="line">    // Turbulent kinetic energy equation</span><br><span class="line">    tmp&lt;fvScalarMatrix&gt; kEqn</span><br><span class="line">    (</span><br><span class="line">        fvm::ddt(k_)</span><br><span class="line">      + fvm::div(phi_, k_)</span><br><span class="line">      - fvm::laplacian(DkEff(), k_)</span><br><span class="line">     ==</span><br><span class="line">        G</span><br><span class="line">      - fvm::Sp(epsilon_/k_, k_)</span><br><span class="line">    );</span><br><span class="line">    kEqn().relax();</span><br><span class="line">    solve(kEqn);</span><br><span class="line">    bound(k_, kMin_);</span><br><span class="line"></span><br><span class="line">    // Re-calculate viscosity</span><br><span class="line">    nut_ = Cmu_*sqr(k_)/epsilon_;</span><br><span class="line">    nut_.correctBoundaryConditions();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>从上述代码，可以将湍流模型的具体计算过程归纳如下：</p>
+<ol>
+<li>计算湍动能生成项 $G$，并修正 $G$ 在第一层网格的值。修正是通过 <code>epsilon_.boundaryField().updateCoeffs();</code> 来实现的，这里调用 <code>epsilon</code> 的边界条件的 <code>updateCoeffs</code> 函数，实现的操作是修正 $G$ 和 $\varepsilon$ 在第一层网格的值。</li>
+<li>利用更新的 $G$ 构建 <code>epsEqn</code>，然后修改 <code>epsEqn</code>（ <code>epsEqn().boundaryManipulate(epsilon_.boundaryField());</code> ），这样做的目的是保证在下一步 <code>solve(epsEqn)</code>的时候，<code>epsilonWallFunction</code> 类型的边界所属的网格的值不会变化，而是保持在 <code>epsilon_.boundaryField().updateCoeffs();</code> 这一步里设置的值（参考 <a target="_blank" rel="noopener" href="http://www.cfd-online.com/Forums/openfoam-solving/132703-boundarymanipulate.html">cfd-online 的这个帖子</a>）。</li>
+<li>求解 <code>epsEqn</code>，得到更新的 $\varepsilon$ 场。</li>
+<li>利用更新的 $\varepsilon$ 场构建并求解 <code>kEqn</code>，得到更新的 $k$ 场。</li>
+<li>计算 $\nu_t$，并更新 $\nu_t$ 在边界上的值（<code>nut_.correctBoundaryConditions()</code>）</li>
+</ol>
+<p>至于具体的 $k$，$\varepsilon$，以及 $\nu_t$ 的边界条件的实现，见后文。</p>
+<p><strong>参考</strong></p>
+<ol>
+<li>The Finite Volume Method in Computational Fluid Dynamics An Advanced Introduction with OpenFOAM® and Matlab®</li>
+<li><a target="_blank" rel="noopener" href="http://www.slideshare.net/fumiyanozaki96/openfoam-36426892">http://www.slideshare.net/fumiyanozaki96/openfoam-36426892</a></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/">http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B6%E4%BB%96/">其他</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的单相流湍流模型之SpalartAllmaras转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇简要分析不可压缩的 SpalartAllmaras 模型的代码。主要内容包括模型输运方程的代码说明，以及一些使用方面的细节。 湍流模型代码实例这一部分分析几个 OpenFOAM 里自带的湍流模型， 并探讨修改或者添加新湍流模型的方法。 1 SpalartAllmaras 模型1.1. 模型分析SpalartAllmaras 模型是一方程模型，它只需要求解一个输运方程。OpenFOAM 中的 SpalartAllmaras 模型是在原始论文[1] 的基础上，引入了 Ashford [2] 对这个模型的修正。下面来看这个模型在 OpenFOAM 中的实现，代码位于 src/turbulenceModels/incompressible/RAS/SpalartAllmaras首先是头文件， SpalartAllmaras.H头文件开始，声明了一个类：Spala...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%89%EF%BC%89/" title="OpenFOAM 中的壁面函数（三）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">OpenFOAM 中的壁面函数（三）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的壁面函数（三）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 这篇来看看计算湍动能 $\varepsilon$ 和 $\omega$ 的壁面函数。 3. 湍动能耗散 $\varepsilon$ 的壁面函数本篇来看看 OpenFOAM 中的 epsilonWallFunction，共有两个： epsilonWallFunction 和 epsilonLowReWallFunction。  (1). epsilonWallFunction  epsilonWallFunction 代码比前面的 kqRWallFunction 复杂多了，主要原因在于这里需要得到的是 epsilon 在临近网格的值，而且，需要考虑包含两个边界面的网格。这里先来梳理代码的脉络，然后再看具体的计算细节。外部调用的主要是 updateCoeffs() 函数，所以，从这个函数看起。 1234567891011121314151617181920212223242526272829...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E5%9B%9B%EF%BC%89/" title="OpenFOAM 中的壁面函数（四）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的壁面函数（四）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的壁面函数（四）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 这篇来看看可能是最关键的 $\nu_t$ 的壁面函数。 5. 湍流粘度 $\nu_t$ 的壁面函数这个类型的壁面函数，结构比较简单，计算的是每一个壁面边界面上的湍流粘度 $\nu_t$。nutWallFunction 是虚基类，其中定义了一个纯虚函数 calcNut 1virtual tmp&lt;scalarField&gt; calcNut() const = 0;    并且在 updateCoeffs 函数中，将 calcNut 的返回值赋值给边界面 1234567891011void nutWallFunctionFvPatchScalarField::updateCoeffs()&#123;    if (updated())    &#123;        return;    &#125;    operator==(calcNut());    fixedValueF...</div></div></div></a><a class="pagination-related" href="/2026/07/16/%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B8%AD%E7%9A%84%20RTS%20%E6%9C%BA%E5%88%B6%E5%88%86%E6%9E%90/" title="湍流模型中的 RTS 机制分析"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">湍流模型中的 RTS 机制分析</div></div><div class="info-2"><div class="info-item-1">湍流模型中的 RTS 机制分析转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里有了上一篇博文的基础，就可以来填一个坑了，即分析 OpenFOAM 中湍流模型框架中的 RTS 。上一篇博文，使用的程序比较简单，这里通过一个实际使用 RTS 机制的例子来加深对 RTS 的理解。 经过前面对那段简单代码的分析，可以知道， declareRunTimeSelectionTable 宏函数的主要功能是声明了一个 hashTable，并定义了一个指向这个hashTable 的指针， 然后还声明了几个辅助的类。 defineRunTimeSelectionTable 这个宏函数的主要作用是对 declareRunTimeSelectionTable 中的 hashTable 指针进行了初始化。 addToRunTimeSelectionTable 的主要作用是将当前类的类名以及返回当前类的对象的一个函数分别作为 hashTable 的 key 和 value 插入到 hashTable...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 不可压缩湍流模型的 divDevReff 函数转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 3.0 版本之前，OpenFOAM 的单相流求解器如 pisoFoam 的动量方程中调用的是湍流模型的 divDevReff 函数来考虑雷诺应力项的作用。只是，细究起来，这个函数似乎有点小问题，本篇来探讨一下这些小问题。 OpenFOAM 中单相不可压缩求解器中，雷诺应力项调用的是湍流模型中的 divDevReff 函数。这个函数的返回值为$$\nabla \cdot(\nu_{eff}\nabla U)+\nabla \cdot\left [\nu_{eff}\nabla U^\mathrm{T}-\frac{1}{3} \nu_{eff} (\nabla \cdot U) \mathbf{I} \right ]$$这里有两个疑问，第一是为什么是 $\frac{1}{3}$ 而不是 $\frac{2}{3}$，对应到代码，即为什么用 dev 函数而不是 de...</div></div></div></a><a class="pagination-related" href="/2026/01/14/20240114/" title="VSCode修改terminal颜色"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-14</div><div class="info-item-2">VSCode修改terminal颜色</div></div><div class="info-2"><div class="info-item-1">vscode终端背景颜色修改以及报错信息颜色修改 转自： https://blog.csdn.net/m0_73832962/article/details/132202467， 侵犯 这里提供vscode终端背景颜色的修改和vscode终端报错提示信息颜色的修改方法 (1)vscode终端背景颜色优化步骤一，ctrl+shift+p打开设置搜索workbench然后点击打开下图的红色箭头指出文件  步骤二，文件拖到最后找到红框内容  步骤3，点击这个链接Base16 Terminal Colors for Visual Studio Code选择喜欢的风格，然后点击复制  复制的信息粘贴到步骤二图中的大括号中就好了，然后保存 12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879&quot;terminal.background&quot...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20div%20%E4%B8%8E%20snGrad%20%E6%93%8D%E4%BD%9C%E7%AC%A6/" title="OpenFOAM 中的 div 与 snGrad 操作符"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的 div 与 snGrad 操作符</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的 div 与 snGrad 操作符转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里OpenFOAM 的方便之处之一是利用C++的类模板和函数重载等技术定义了很多各种离散操作符，如div,laplacian,grad 等等。利用这些操作符，很容易就能对偏微分方程进行离散，并构建起线性方程组。但是，这些操作符真正执行的运算，却需要结合有限体积方法的本质来理解一番才能真正掌握。下面尝试着对 OpenFOAM 中的 div 和 snGrad 操作符进行一点解读。 1. div 操作符的本质div操作符表面看，是计算散度的，实际上，在OpenFAOM中，div 操作符的作用是加和，比如说 $ \nabla \cdot (UU)$，在OpenFOAM中表示为fvm::div(phi,U)，这段代码真正执行的是$\sum_f U_f \phi_f$运算，即将每个网格包含的面上的流率与速度乘积，然后再加起来。再比如，twoPhaseEulerFoam的UaEqn方程...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的 Run Time Selection 机制</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的 Run Time Selection 机制转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里source flux 博客 曾经出过一个解释 Run Time Selection(RTS) 机制的系列博文，推荐想理解 RTS 的读者去仔细读读。本篇算是我在读完以后做的一个笔记，以及一些总结，供读者参考。 OpenFOAM 中包含各个 CFD 相关的模块，每个模块，从 C++ 的角度来看，其实都是一个类的框架。基类用作接口，一个派生类则是一个具体的模型。OpenFOAM 中的模块广泛使用 RTS 机制，因此 OpenFOAM 的求解器中，只需要设定模型的调用接口。算例具体使用的是那个模型，则是在运行时才确定的，而且可以在算例运行过程中修改选中的模型。下面通过一个 source flux 博客 提供的代码，来解读 RTS 机制的实现原理。为了方便解读，这里将代码摘录如下，代码所有权归 source flux 博客 所有： 12345678910111213...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">52</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#OpenFOAM%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">OpenFOAM中的壁面函数（一）</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#1-%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="toc-number">1.1.</span> <span class="toc-text">1. 壁面函数的基本原理</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-%E5%9C%A8-OpenFOAM-%E4%B8%AD%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">1.2.</span> <span class="toc-text">2. 在 OpenFOAM 中的实现</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/" title="C++ 中派生类引用与基类引用的隐式转换">C++ 中派生类引用与基类引用的隐式转换</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例">OpenFOAM 中求解 ODE 一例</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制">OpenFOAM 中的 Run Time Selection 机制</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'all',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || 'eb1f03e1db35b3784d91c2f0aa568606'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

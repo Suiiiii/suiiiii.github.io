@@ -1,0 +1,347 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>OpenFOAM 中的单相流湍流模型之SpalartAllmaras | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="OpenFOAM 中的单相流湍流模型之SpalartAllmaras转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇简要分析不可压缩的 SpalartAllmaras 模型的代码。主要内容包括模型输运方程的代码说明，以及一些使用方面的细节。 湍流模型代码实例这一部分分析几个 OpenF">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">
+<meta property="og:url" content="http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="OpenFOAM 中的单相流湍流模型之SpalartAllmaras转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇简要分析不可压缩的 SpalartAllmaras 模型的代码。主要内容包括模型输运方程的代码说明，以及一些使用方面的细节。 湍流模型代码实例这一部分分析几个 OpenF">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-07-16T08:46:34.000Z">
+<meta property="article:modified_time" content="2026-07-16T08:49:18.369Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="其他">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "OpenFOAM 中的单相流湍流模型之SpalartAllmaras",
+  "url": "http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-07-16T08:46:34.000Z",
+  "dateModified": "2026-07-16T08:49:18.369Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'OpenFOAM 中的单相流湍流模型之SpalartAllmaras',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-16T08:49:18.369Z" title="更新于 2026-07-16 10:49:18">2026-07-16</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h1 id="OpenFOAM-中的单相流湍流模型之SpalartAllmaras"><a href="#OpenFOAM-中的单相流湍流模型之SpalartAllmaras" class="headerlink" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras"></a>OpenFOAM 中的单相流湍流模型之SpalartAllmaras</h1><p>转自：<a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/%EF%BC%8C%E4%BE%B5%E5%88%A0">https://xiaopingqiu.github.io/，侵删</a></p>
+<p>仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里<br>本篇简要分析不可压缩的 SpalartAllmaras 模型的代码。主要内容包括模型输运方程的代码说明，以及一些使用方面的细节。</p>
+<h3 id="湍流模型代码实例"><a href="#湍流模型代码实例" class="headerlink" title="湍流模型代码实例"></a>湍流模型代码实例</h3><p>这一部分分析几个 OpenFOAM 里自带的湍流模型， 并探讨修改或者添加新湍流模型的方法。</p>
+<h4 id="1-SpalartAllmaras-模型"><a href="#1-SpalartAllmaras-模型" class="headerlink" title="1 SpalartAllmaras 模型"></a>1 SpalartAllmaras 模型</h4><h5 id="1-1-模型分析"><a href="#1-1-模型分析" class="headerlink" title="1.1. 模型分析"></a>1.1. 模型分析</h5><p>SpalartAllmaras 模型是一方程模型，它只需要求解一个输运方程。OpenFOAM 中的 SpalartAllmaras 模型是在原始论文[1] 的基础上，引入了 Ashford [2] 对这个模型的修正。下面来看这个模型在 OpenFOAM 中的实现，代码位于 <code>src/turbulenceModels/incompressible/RAS/SpalartAllmaras</code><br>首先是头文件， <code>SpalartAllmaras.H</code><br>头文件开始，声明了一个类：SpalartAllmaras</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">class SpalartAllmaras</span><br><span class="line">:</span><br><span class="line">    public RASModel</span><br></pre></td></tr></table></figure>
+
+
+
+<p>说明这个类是公有继承 <code>RASModel</code> 类的。<br>接下来是一些数据成员以及成员函数的声明，这里无需赘述，直接来看函数的具体定义吧。<br>函数的具体定义，在<code>SpalartAllmaras.C</code> 里（注意到 OpenFOAM 的代码几乎都是这样讲声明和定义分开，这样做的目的，是为了防止重复声明的问题，更详细的说明，见我的<a target="_blank" rel="noopener" href="http://xiaopingqiu.github.io/2016/03/06/separationOfDeclarationAndDefiniton/">另一篇博文</a>）。注意，湍流模型的定义，最终是为了在求解器中进行调用的，所以，先来回顾一下湍流模型贡献给求解器中动量方程中那一项：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">turbulence-&gt;divDevReff(U)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这一项，不同求解器可能会有不同，但大致的形式是这样的。<br>很显然，这个 <code>divDevReff</code> 应该是湍流模型类的成员函数，实际也的确如此， <code>SpalartAllmaras.C</code> 有这个函数的定义：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">tmp&lt;fvVectorMatrix&gt; SpalartAllmaras::divDevReff(volVectorField&amp; U) const</span><br><span class="line">&#123;</span><br><span class="line">    const volScalarField nuEff_(nuEff());</span><br><span class="line"></span><br><span class="line">    return</span><br><span class="line">    (</span><br><span class="line">      - fvm::laplacian(nuEff_, U)</span><br><span class="line">      - fvc::div(nuEff_*dev(T(fvc::grad(U))))</span><br><span class="line">    );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这个函数，写成公式是如下形式<br>$$<br>-\nabla \cdot (\nu_{eff}\nabla U)-\nabla \cdot [\nu_{eff}dev(\nabla ^TU)]<br>$$<br>OpenFOAM 中的 <code>dev</code>运算符定义为 $dev(T)&#x3D;T-\frac{1}{3}tr(T)I$ ， <code>tr</code> 为张量的迹，即主对角元素之和所以。对于张量 $\nabla ^TU$ ，$tr(\nabla ^TU) &#x3D;\nabla \cdot U$，因此上式可以写为【注一】<br>$$<br>-\nabla \cdot (\nu_{eff}\nabla U)-\nabla \cdot [\nu_{eff}(\nabla^TU-\frac{1}{3}(\nabla \cdot U))]<br>$$<br>上述 <code>divDevReff</code> 函数中，变量 <code>nuEff_</code> d的值是函数 <code>nuEff()</code> 的返回值，但是，在 <code>SpalartAllmaras.C</code> 中却未见 <code>nuEff()</code> 函数的定义。这里就要记住了，C++ 的类继承的一个特性是派生类会从基类继承其中定义的成员函数。所以看到本类中没定义的函数时，<strong>don’t panic</strong>，往基类找就是了。翻看基类 <code>RASModel</code> 的代码，可以很容易从 <code>RASModel.C</code> 中找出来 <code>nuEff()</code> 的定义：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">virtual tmp&lt;volScalarField&gt; nuEff() const  </span><br><span class="line">&#123;</span><br><span class="line">    return tmp&lt;volScalarField&gt;</span><br><span class="line">    (</span><br><span class="line">        new volScalarField(&quot;nuEff&quot;, nut() + nu())</span><br><span class="line">    );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>函数 <code>nut()</code> 的定义可以从 <code>SpalartAllmaras.H</code> 中找到，可是 <code>nu()</code> 呢？虽然从名字可以猜到它返回的是分子粘度（可见变量命名的重要性啊），可是，它的定义在哪里？ <code>RASModel.C</code> 也没有啊…<br>答案是，继续向上找，RASModel 类没有，那就去更上一层的基类，turbulenceModel。果然，在 <code>turbulenceModel.C</code> 中能找到其定义：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">inline tmp&lt;volScalarField&gt; nu() const</span><br><span class="line">    &#123;</span><br><span class="line">        return transportModel_.nu();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>transportModel_</code> 又是什么鬼？这个不是本篇博文的内容，该回到正题了，这里应该关注的是湍流粘度 <code>nut_</code> 。<br>湍流模型不可能仅仅是给求解器贡献那一项，湍流粘度应该也随着求解器的运行而更新。是这样的，求解器中的</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">turbulence-&gt;correct();</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这句代码负责湍流粘度的更新。这里又涉及到一个湍流类的成员函数： <code>corretc</code>。这个函数是湍流模型类的核心，因为湍流模型输运方程的求解，湍流粘度的更新都在这个函数里面。下面来看 <code>SpalartAllmaras</code> 模型的 <code>correct</code> 函数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">void SpalartAllmaras::correct()</span><br><span class="line">&#123;</span><br><span class="line">    RASModel::correct();</span><br><span class="line">    if (!turbulence_)</span><br><span class="line">    &#123;</span><br><span class="line">        // Re-calculate viscosity</span><br><span class="line">        nut_ = nuTilda_*fv1(this-&gt;chi());</span><br><span class="line">        nut_.correctBoundaryConditions();</span><br><span class="line"></span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line">    if (mesh_.changing())</span><br><span class="line">    &#123;</span><br><span class="line">        d_.correct();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    const volScalarField chi(this-&gt;chi());</span><br><span class="line">    const volScalarField fv1(this-&gt;fv1(chi));</span><br><span class="line"></span><br><span class="line">    const volScalarField Stilda</span><br><span class="line">    (</span><br><span class="line">        fv3(chi, fv1)*::sqrt(2.0)*mag(skew(fvc::grad(U_)))</span><br><span class="line">      + fv2(chi, fv1)*nuTilda_/sqr(kappa_*d_)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    tmp&lt;fvScalarMatrix&gt; nuTildaEqn</span><br><span class="line">    (</span><br><span class="line">        fvm::ddt(nuTilda_)</span><br><span class="line">      + fvm::div(phi_, nuTilda_)</span><br><span class="line">      - fvm::laplacian(DnuTildaEff(), nuTilda_)</span><br><span class="line">      - Cb2_/sigmaNut_*magSqr(fvc::grad(nuTilda_))</span><br><span class="line">     ==</span><br><span class="line">        Cb1_*Stilda*nuTilda_</span><br><span class="line">      - fvm::Sp(Cw1_*fw(Stilda)*nuTilda_/sqr(d_), nuTilda_)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    nuTildaEqn().relax();</span><br><span class="line">    solve(nuTildaEqn);</span><br><span class="line">    bound(nuTilda_, dimensionedScalar(&quot;0&quot;, nuTilda_.dimensions(), 0.0));</span><br><span class="line">    nuTilda_.correctBoundaryConditions();</span><br><span class="line"></span><br><span class="line">    // Re-calculate viscosity</span><br><span class="line">    nut_.internalField() = fv1*nuTilda_.internalField();</span><br><span class="line">    nut_.correctBoundaryConditions();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>先看核心的输运方程， <code>nuTildaEqn</code> ，这个部分的每一行写成公式，分别如下：<br>$$<br>\frac{\partial \tilde{\nu}}{\partial t} \<br>\nabla \cdot (U \tilde{\nu}) \<br>-\nabla \cdot [D_{\tilde{\nu}<em>{eff}} \nabla \tilde{\nu}] \<br>-\frac{C</em>{b2}}{\sigma_{\nu_t}} \cdot |\nabla \tilde{\nu}|^2 \<br>C_{b1}\cdot \tilde{S} \cdot \tilde{\nu} \<br>-\frac{C_{w1}\cdot f_w\cdot \tilde{\nu}}{d^2} \cdot \tilde{\nu}\<br>$$</p>
+<p>最后两项都包含了需要求解的量 $\tilde{\nu}$， 但是处理方式却不一样，最后一项，其实是将原本的 $\tilde{\nu} ^2$ 项进行了线性化，并用 <code>fvm::Sp</code> 操作符进行隐式处理。而倒数第二项，则是作的显式处理。差别在于，倒数第二项仅仅是用上一步得到的 $\tilde{\nu}$ 代入，然后这一项被加到 $Ax&#x3D;b$ 中的 $b$ 部分。而隐式处理则会对系数矩阵 $A$ 有贡献。<br>输运方程中涉及到的变量和函数，全部都在 <code>SpalartAllmaras</code> 类中有定义，这里就不再单独分析了，仅将涉及到的公式列出如下<br>$$<br>D_{\tilde{\nu}<em>{eff}}&#x3D;\frac{\nu+\tilde{\nu}}{\sigma</em>{\nu_t}}<br>$$<br>$$<br>f_w&#x3D;g\cdot \left [ \frac{1+C_{w3}^6}{g^6+C_{w3}^6} \right]^{1&#x2F;6},\quad g&#x3D;r+C_{w2}\cdot(r^6-r) \<br>r&#x3D;min\left[ \frac{\tilde{\nu}}{max(\tilde{S}, SMALL)\cdot \kappa^2 d^2},10 \right]<br>$$</p>
+<p>$$<br>\tilde{S}&#x3D;f_{v3}\cdot\sqrt{2\Omega_{ij}:\Omega_{ij}}+\frac{f_{v2}\tilde{\nu}}{\kappa^2 d^2},\quad \Omega_{ij}&#x3D;\frac{1}{2}(\nabla U -\nabla ^T U)<br>$$</p>
+<p>$f_{v2}$ 和 $f_{v3}$ 有点特殊，因为涉及到了 Ashford 对原始模型的修正。根据作者的论文，修正的目的是防止 $\tilde{S}$ 出现负值。<br>如果不引入 Ashford 修正，则 $f_{v3}&#x3D;1$；引入以后，则<br>$$<br>f_{v3}&#x3D;\frac{(1+\chi \cdot f_{v1})}{c_{v2}}\cdot \frac{3+\frac{\chi}{c_{v2}} + (\frac{\chi}{c_{v2}})^2 }{(1+\frac{\chi}{c_{v2}})^3}<br>$$<br>对于 $f_{v2}$，如果不引入 Ashford 修正，则<br>$$<br>f_{v2}&#x3D;\frac{1}{(1+\frac{\chi}{c_{v2}})^3}<br>$$<br>若引入，则<br>$$<br>f_{v2}&#x3D;1-\frac{\chi}{1+\chi f_{v1}}<br>$$<br>此外，<br>$$<br>f_{v1}&#x3D;\frac{\chi ^3}{\chi ^3 + c_{v1}^3}, \quad \chi&#x3D;\frac{\tilde{\nu}}{\nu}, \quad \nu_t &#x3D; \tilde{\nu}<br>f_{v1}$$<br>$d$ 是与壁面的距离，有一个专门的类 <code>wallDist</code> 来计算它。<br>其他的没有提到的变量，则都是模型常数了。具体的值都在 <code>SpalartAllmaras</code> 类的构造函数中定义了，这里就不再赘述了。</p>
+<h5 id="1-2-一些细节"><a href="#1-2-一些细节" class="headerlink" title="1.2. 一些细节"></a>1.2. 一些细节</h5><ol>
+<li><code>turbulence_</code> 这个变量<br><code>correct</code> 函数中，只有当 <code>turbulence_</code> 为 <code>true</code> 时，下面求解输运方程的部分代码才会执行。这个变量又是从 <code>RASModel</code> 类继承过来的，其初始化的语句为 <code>turbulence_(lookup(&quot;turbulence&quot;))</code> ，这意味着，这个变量的值是从 <code>RASProperties</code> 文件中读取的（详见文末的 <code>RASProperties</code> 示例）。</li>
+<li>模型常数，除了使用默认值，还可以自己指定（注：除非很有把握，一般不要随便修改模型常数）。具体方法是，在 <code>RASProperties</code> 文件里，建立一个名为 <code>SpalartAllmarasCoeffs</code> 的 subDict，详见文末的示例。</li>
+<li><code>bound</code> 函数<br>这个函数的定义在头文件 <code>bound.H</code> 里，其功能是限制 $\tilde{\nu}$ 的最小值。不过这种限制其实没有多少物理意义，纯粹是数值技巧。其中用到了 <code>fvc::average</code> 函数（见我的<a target="_blank" rel="noopener" href="http://xiaopingqiu.github.io/2015/05/17/OpenFOAMcode1/">另一篇博文</a>）。</li>
+<li><code>read</code> 成员函数<br>这个成员函数，初看之下似乎跟模型常数的初始化有关，实则不然。模型常数的初始化在类的构造函数部分完成， <code>coeffDict_</code> 这个变量在基类 <code>RASModel</code> 的构造函数中先用 <code>type()+Coeffs</code> (这里是 <code>SpalartAllmarasCoeffs</code> )这个 subDict 初始化了，然后，在 <code>SpalartAllmaras</code> 类的构造函数中，每一个模型常数都是先去 <code>coeffDict_</code> 中查找是否用用户自定义的值，如果没有，则用模型的默认值，并且将这个默认值添加到 <code>coeffDict_</code> 这个字典中。</li>
+<li>其他成员函数<br><code>SpalartAllmaras</code> 显然不需要用到湍动能 <code>k</code> 以及湍动能耗散 <code>epsilon</code> ，但是在 <code>SpalartAllmaras.C</code> 中确有这两个函数的定义，而且返回值是0。这是因为，在基类 <code>turbulenceModel</code> 中， <code>k()</code>， <code>epsilon()</code> 函数被声明为纯虚函数，如果不在 <code>SpalartAllmaras</code> 中重新定义这两个函数，则 <code>SpalartAllmaras</code> 也将是包括纯虚函数的抽象类了。在 C++ 中，抽象类是无法建立对象的。<br><code>devReff</code>， <code>R</code> ， <code>divDevRhoReff</code> 这几个成员函数，是湍流模型提供给其他模型调用的函数，比如，在计算表面应力的 <code>forces</code> 类中就需要调用湍流模型的 <code>devReff</code> 函数。</li>
+</ol>
+<h5 id="附：-RASProperties-文件示例"><a href="#附：-RASProperties-文件示例" class="headerlink" title="附： RASProperties 文件示例"></a>附： RASProperties 文件示例</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">/*--------------------------------*- C++ -*----------------------------------*\</span><br><span class="line">| =========                 |                                                 |</span><br><span class="line">| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |</span><br><span class="line">|  \\    /   O peration     | Version:  2.3.1                                 |</span><br><span class="line">|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |</span><br><span class="line">|    \\/     M anipulation  |                                                 |</span><br><span class="line">\*---------------------------------------------------------------------------*/</span><br><span class="line">FoamFile</span><br><span class="line">&#123;</span><br><span class="line">    version     2.0;</span><br><span class="line">    format      ascii;</span><br><span class="line">    class       dictionary;</span><br><span class="line">    location    &quot;constant&quot;;</span><br><span class="line">    object      RASProperties;</span><br><span class="line">&#125;</span><br><span class="line">// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //</span><br><span class="line"></span><br><span class="line">RASModel        SpalartAllmaras ;</span><br><span class="line">turbulence      on; //若为 off，则湍流模型的输运方程将不会求解！</span><br><span class="line">printCoeffs     on; // 输出模型常数</span><br><span class="line"></span><br><span class="line">SpalartAllmarasCoeffs // 设置模型常数(仅为示例，具体数值不要较真)</span><br><span class="line">&#123;</span><br><span class="line">    Cw2       0.20;</span><br><span class="line">    Cw3       0.10;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// ************************************************************************* //</span><br></pre></td></tr></table></figure>
+
+<p>【注一】：N-S 方程中，这一项应该是<br>$$<br>-\nabla \cdot (\nu_{eff}\nabla U)-\nabla \cdot [\nu_{eff}(\nabla^TU-\frac{2}{3}(\nabla \cdot U))]<br>$$<br>而且，在可压缩的湍流模型中， <code>divDevReff</code> 函数用的是 <code>dev2</code> 函数，所以其定义的形式就跟 N-S 方程一致了。但不知道为什么不可压缩的湍流模型为什么要用 <code>dev</code> 函数。虽然对于不可压缩的情形，由于 $\nabla \cdot U&#x3D;0$，用 <code>dev</code> 或者 <code>dev2</code> 应该关系不大，但这种做法仍然很费解。在OpenFOAM-3.0版本中，可压和不可压用的都是 <code>dev2</code> 函数了。</p>
+<h5 id="参考："><a href="#参考：" class="headerlink" title="参考："></a>参考：</h5><p>[1] P. Spalart and S. Allmaras. “A one-equation turbulence model for aerodynamic flows”. Technical Report AIAA-92-0439. American Institute of Aeronautics and Astronautics. 1992.</p>
+<p>[2] “An Unstructured Grid Generation and Adaptive Solution Technique for High Reynolds Number Compressible Flows”, G.A. Ashford, Ph.D. thesis, University of Michigan, 1996.</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/">http://example.com/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B6%E4%BB%96/">其他</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OpenFOAM 中的 Run Time Selection 机制</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的 Run Time Selection 机制转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里source flux 博客 曾经出过一个解释 Run Time Selection(RTS) 机制的系列博文，推荐想理解 RTS 的读者去仔细读读。本篇算是我在读完以后做的一个笔记，以及一些总结，供读者参考。 OpenFOAM 中包含各个 CFD 相关的模块，每个模块，从 C++ 的角度来看，其实都是一个类的框架。基类用作接口，一个派生类则是一个具体的模型。OpenFOAM 中的模块广泛使用 RTS 机制，因此 OpenFOAM 的求解器中，只需要设定模型的调用接口。算例具体使用的是那个模型，则是在运行时才确定的，而且可以在算例运行过程中修改选中的模型。下面通过一个 source flux 博客 提供的代码，来解读 RTS 机制的实现原理。为了方便解读，这里将代码摘录如下，代码所有权归 source flux 博客 所有： 12345678910111213...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%80%EF%BC%89/" title="OpenFOAM 中的壁面函数（一）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">OpenFOAM 中的壁面函数（一）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM中的壁面函数（一）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 本系列来看看 OpenFOAM 中的壁面函数。壁面函数的本质，是边界条件。这里主要来看看壁面函数的基本原理，OpenFOAM 中实现了的壁面函数，以及选择壁面函数的一些参考依据。 1. 壁面函数的基本原理湍流模拟中，需要对近壁区域进行处理。一般来讲，壁面处理方法包含两类，一类是使用很细的网格，使靠近壁面的第一层网格在粘性层内（$y^+ &lt;1$），然后里可以直接解析到粘性层的低雷诺湍流模型；另一类，不直接解析粘性层，而是将第一层网格设置在对数区（$y^+&gt; 30$），然后用经验公式来将粘性层和对数区关联起来。下图是一个典型的壁面附近的 $U^+ \text{-} y^+$ 关系图。壁面律图片来自 Wikipedia:Law of the wall 。在粘性层，满足如下关系$$u^+ &#x3D; y^+$$而在对数区，则满足$$U^+ &#x3D; \frac{1}{\kappa...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/01/14/20240114/" title="VSCode修改terminal颜色"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-14</div><div class="info-item-2">VSCode修改terminal颜色</div></div><div class="info-2"><div class="info-item-1">vscode终端背景颜色修改以及报错信息颜色修改 转自： https://blog.csdn.net/m0_73832962/article/details/132202467， 侵犯 这里提供vscode终端背景颜色的修改和vscode终端报错提示信息颜色的修改方法 (1)vscode终端背景颜色优化步骤一，ctrl+shift+p打开设置搜索workbench然后点击打开下图的红色箭头指出文件  步骤二，文件拖到最后找到红框内容  步骤3，点击这个链接Base16 Terminal Colors for Visual Studio Code选择喜欢的风格，然后点击复制  复制的信息粘贴到步骤二图中的大括号中就好了，然后保存 12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879&quot;terminal.background&quot...</div></div></div></a><a class="pagination-related" href="/2026/07/16/%E4%B8%A4%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84%E9%9A%8F%E6%97%B6%E9%97%B4%E5%8F%98%E5%8C%96%E7%9A%84%E8%BE%B9%E7%95%8C%E6%9D%A1%E4%BB%B6/" title="两个简单的随时间变化的边界条件"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">两个简单的随时间变化的边界条件</div></div><div class="info-2"><div class="info-item-1">两个简单的随时间变化的边界条件转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里这一篇里介绍OpenFOAM自带的两个简单的随时间变化的边界条件： uniformFixedValue 和 flowRateInletVelocity 。 1. uniformFixedValue这个边界属于第一类边界，即直接指定边界上某个量的值。跟 fixedValue 的不同之处在于，这个边界条件允许边界上的值随着时间变化。一般的用法如下： 12345678type            uniformFixedValue;uniformValue     table(    (0.000 (0 0 0.002))    (0.010 (0 0 0.002))    (0.011 (0.011 0 0.011))    (0.100 (0.10 0 0.100)));  上面这一段指定的是速度 U （也可以是其他矢量，或者标量）的边界条件，通过一个 table 来定义边界随时间的变化行为，具...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E5%9B%9B%EF%BC%89/" title="OpenFOAM 中的壁面函数（四）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的壁面函数（四）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的壁面函数（四）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 这篇来看看可能是最关键的 $\nu_t$ 的壁面函数。 5. 湍流粘度 $\nu_t$ 的壁面函数这个类型的壁面函数，结构比较简单，计算的是每一个壁面边界面上的湍流粘度 $\nu_t$。nutWallFunction 是虚基类，其中定义了一个纯虚函数 calcNut 1virtual tmp&lt;scalarField&gt; calcNut() const = 0;    并且在 updateCoeffs 函数中，将 calcNut 的返回值赋值给边界面 1234567891011void nutWallFunctionFvPatchScalarField::updateCoeffs()&#123;    if (updated())    &#123;        return;    &#125;    operator==(calcNut());    fixedValueF...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中求解 ODE 一例</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中求解 ODE 一例转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 本篇介绍如何编写一个小程序来调用 OpenFOAM 的 ODE 求解器来求解任意常微分方程的初值问题。 1. 数学背景首先简要看一下涉及的数学背景。对于一阶的常微分方程，$$y’&#x3D;f(x,y), \quad x\in[a,b] \y(a)&#x3D;y_0$$常微分方程，如果存在解析解的话，其解应该是一个函数 $y&#x3D;f(x)$。然而，大多数常微分方程是没有解析解的，只能数值求解。数值方法得到的，是一系列的 $x_0, x_1, \cdots x_n$ 对应的函数值 $y_0, y_1, \cdots y_n$。 常用的数值解法有：  显式欧拉法这种方法最简单，将区间 $[a,b]$ 分成 n 份，则得到步长 $h&#x3D;(b-a)&#x2F;n$。以 $y(a)&#x3D;y_0$ 为起点，通过下述迭代，$$y_{m+1} &#x3D; y_m+hf(x_m,y...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%89%EF%BC%89/" title="OpenFOAM 中的壁面函数（三）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的壁面函数（三）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的壁面函数（三）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 这篇来看看计算湍动能 $\varepsilon$ 和 $\omega$ 的壁面函数。 3. 湍动能耗散 $\varepsilon$ 的壁面函数本篇来看看 OpenFOAM 中的 epsilonWallFunction，共有两个： epsilonWallFunction 和 epsilonLowReWallFunction。  (1). epsilonWallFunction  epsilonWallFunction 代码比前面的 kqRWallFunction 复杂多了，主要原因在于这里需要得到的是 epsilon 在临近网格的值，而且，需要考虑包含两个边界面的网格。这里先来梳理代码的脉络，然后再看具体的计算细节。外部调用的主要是 updateCoeffs() 函数，所以，从这个函数看起。 1234567891011121314151617181920212223242526272829...</div></div></div></a><a class="pagination-related" href="/2026/07/16/LES%20%E4%B8%AD%E7%9A%84%20commutation%20error/" title="LES 中的 commutation error"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">LES 中的 commutation error</div></div><div class="info-2"><div class="info-item-1">LES 中的 commutation error转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 大涡模拟不仅对网格的解析度有要求，而且对网格质量也有更高的要求。本文介绍一种由网格带来的误差，commutation error，并简单分析其对结果的影响。 在 LES 模拟的程序中，常用的一种过滤方法是隐式过滤，即，用当地网格的尺度作为该处的过滤尺度。这种方法在各种类型的网格上实现起来都相对简单。只是，稍微复杂一点的几何构体，生成的网格的尺度总是不可能一样，这也就意味着过滤尺度是变化的。如果相邻网格的尺度变化很大，这也将引起相邻网格的过滤尺度相差很大，这时就会带来严重的 commutation error。 Commutation error 产生的根本原因是，当相邻网格过滤尺度不一样时，，$\overline{\tfrac{\partial \phi}{\partial x}} \neq \tfrac{\partial \overline{\phi}}{\partial ...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">52</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#OpenFOAM-%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras"><span class="toc-number">1.</span> <span class="toc-text">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B"><span class="toc-number">1.1.</span> <span class="toc-text">湍流模型代码实例</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-SpalartAllmaras-%E6%A8%A1%E5%9E%8B"><span class="toc-number">1.1.1.</span> <span class="toc-text">1 SpalartAllmaras 模型</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#1-1-%E6%A8%A1%E5%9E%8B%E5%88%86%E6%9E%90"><span class="toc-number">1.1.1.1.</span> <span class="toc-text">1.1. 模型分析</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#1-2-%E4%B8%80%E4%BA%9B%E7%BB%86%E8%8A%82"><span class="toc-number">1.1.1.2.</span> <span class="toc-text">1.2. 一些细节</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E9%99%84%EF%BC%9A-RASProperties-%E6%96%87%E4%BB%B6%E7%A4%BA%E4%BE%8B"><span class="toc-number">1.1.1.3.</span> <span class="toc-text">附： RASProperties 文件示例</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%8F%82%E8%80%83%EF%BC%9A"><span class="toc-number">1.1.1.4.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/" title="C++ 中派生类引用与基类引用的隐式转换">C++ 中派生类引用与基类引用的隐式转换</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例">OpenFOAM 中求解 ODE 一例</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制">OpenFOAM 中的 Run Time Selection 机制</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'all',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || 'f0f8303ce428e52d0f3d7486339503d8'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

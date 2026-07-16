@@ -1,0 +1,326 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>C++ 中派生类引用与基类引用的隐式转换 | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="C++ 中派生类引用与基类引用的隐式转换转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里在读 OpenFOAM 代码过程中，有一类应用初看之下觉得很费解，比如 OpenFOAM-2.3.x 的 twoPhaseEulerFoam，createFields.H 有这么一段： 12345pha">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C++ 中派生类引用与基类引用的隐式转换">
+<meta property="og:url" content="http://example.com/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="C++ 中派生类引用与基类引用的隐式转换转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里在读 OpenFOAM 代码过程中，有一类应用初看之下觉得很费解，比如 OpenFOAM-2.3.x 的 twoPhaseEulerFoam，createFields.H 有这么一段： 12345pha">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-07-16T08:46:34.000Z">
+<meta property="article:modified_time" content="2026-07-16T08:49:18.253Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="其他">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "C++ 中派生类引用与基类引用的隐式转换",
+  "url": "http://example.com/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-07-16T08:46:34.000Z",
+  "dateModified": "2026-07-16T08:49:18.253Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'C++ 中派生类引用与基类引用的隐式转换',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">C++ 中派生类引用与基类引用的隐式转换</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">C++ 中派生类引用与基类引用的隐式转换</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-16T08:49:18.253Z" title="更新于 2026-07-16 10:49:18">2026-07-16</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h1 id="C-中派生类引用与基类引用的隐式转换"><a href="#C-中派生类引用与基类引用的隐式转换" class="headerlink" title="C++ 中派生类引用与基类引用的隐式转换"></a>C++ 中派生类引用与基类引用的隐式转换</h1><p>转自：<a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/%EF%BC%8C%E4%BE%B5%E5%88%A0">https://xiaopingqiu.github.io/，侵删</a></p>
+<p>仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里<br>在读 OpenFOAM 代码过程中，有一类应用初看之下觉得很费解，比如 OpenFOAM-2.3.x 的 <code>twoPhaseEulerFoam</code>，createFields.H 有这么一段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">phaseModel&amp; phase1 = fluid.phase1();</span><br><span class="line">phaseModel&amp; phase2 = fluid.phase2();</span><br><span class="line"></span><br><span class="line">volScalarField&amp; alpha1 = phase1;</span><br><span class="line">volScalarField&amp; alpha2 = phase2;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>乍看之下，感觉有点奇怪：怎么能将 phaseModel 类的引用直接赋值给 volScalarField 类的引用呢？后来查看了一下 phaseModel 类的定义，发现原来 phaseModel 类是 volScalarField 类的派生，由此上面代码就好理解了，无非是将派生类引用赋值给基类引用而已。</p>
+<p>但是，下面代码，虽然深究下去发现原理类似，但是乍看上去却更加费解：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Foam::tmp&lt;Foam::volVectorField&gt; Foam::twoPhaseSystem::U() const</span><br><span class="line">&#123;</span><br><span class="line">    return phase1_*phase1_.U() + phase2_*phase2_.U();</span><br><span class="line">&#125;</span><br><span class="line">Foam::tmp&lt;Foam::surfaceScalarField&gt; Foam::twoPhaseSystem::calcPhi() const</span><br><span class="line">&#123;</span><br><span class="line">    return</span><br><span class="line">        fvc::interpolate(phase1_)*phase1_.phi()</span><br><span class="line">      + fvc::interpolate(phase2_)*phase2_.phi();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这里将 <code>phase1_</code> 直接与 <code>phase1_.U()</code>（或者 <code>phase1_.phi()</code>）相乘，怎么理解？从原理上讲，应该是 <code>phase1_</code> 的体积分率与其速度的乘积。<br>仔细看一下 phaseModel 类的构造函数，</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Foam::phaseModel::phaseModel</span><br><span class="line">(</span><br><span class="line">    const twoPhaseSystem&amp; fluid,</span><br><span class="line">    const dictionary&amp; phaseProperties,</span><br><span class="line">    const word&amp; phaseName</span><br><span class="line">)</span><br><span class="line">:</span><br><span class="line">    volScalarField</span><br><span class="line">    (</span><br><span class="line">        IOobject</span><br><span class="line">        (</span><br><span class="line">            IOobject::groupName(&quot;alpha&quot;, phaseName), // &quot;alpha.particle&quot; </span><br><span class="line">            fluid.mesh().time().timeName(),</span><br><span class="line">            fluid.mesh(),</span><br><span class="line">            IOobject::READ_IF_PRESENT,</span><br><span class="line">            IOobject::AUTO_WRITE</span><br><span class="line">        ),</span><br><span class="line">        fluid.mesh(),</span><br><span class="line">        dimensionedScalar(&quot;alpha&quot;, dimless, 0)</span><br><span class="line">    ),</span><br><span class="line">    ......</span><br><span class="line">    ......</span><br></pre></td></tr></table></figure>
+
+
+
+<p>原来是这样，读取 “alpha.phaseName” 数据文件构建了一个 IOobject 对象，并用该对象对一个临时的 volScalarField 对象进行了初始化，然后用成员初始化列表，将该临时 volScalarField 对象对基类 volScalarField 进行初始化。</p>
+<p>这样一来，对于上面的情形， <code>phase1_ * phase1_.U()</code> ，实际上是进行了一个隐式转换，先将 <code>phase1_</code> 转换成基类 volScalarField 类型，由于上述 phaseModel 类的初始化设定，转换以后，<code>phase1_</code> 其实就相当于用 alpha 初始化过的那个 volScalarField 类的对象了。所以， <code>phase1_ * phase1_.U()</code> 其实相当于 <code>alpha.phaseName * phase1_.U()</code> ，是两个 volScalarField 类对象之间的乘法运算。</p>
+<p>在 <code>twoPhaseEulerFoam</code>的代码里，类似的用法还有很多，这里不能一一举例，当看到某处费解的时候，不妨想想是否是上面提到的情形。</p>
+<p>为了便于理解这个原理，我这里写了一个简单的 c++ 测试小程序</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line">#include&lt;iostream&gt;</span><br><span class="line">using namespace std;</span><br><span class="line"></span><br><span class="line">class A</span><br><span class="line">&#123;</span><br><span class="line">    public:</span><br><span class="line">        int a;</span><br><span class="line">        A(int a);</span><br><span class="line">        void print();</span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line">A::A(int a)</span><br><span class="line">&#123;</span><br><span class="line">    this-&gt;a = a;</span><br><span class="line">&#125;</span><br><span class="line">void A::print()</span><br><span class="line">&#123;</span><br><span class="line">    cout&lt;&lt;&quot;base class:&quot;&lt;&lt;&quot;a=&quot;&lt;&lt;a&lt;&lt;endl;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class B : public A</span><br><span class="line">&#123;</span><br><span class="line">    public:</span><br><span class="line">        int b;</span><br><span class="line">        B(int a, int b);</span><br><span class="line">        void print();</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">B::B(int a, int b):A(a)</span><br><span class="line">&#123;</span><br><span class="line">    this-&gt;b = b;</span><br><span class="line">&#125;</span><br><span class="line">void B::print()</span><br><span class="line">&#123;</span><br><span class="line">    cout&lt;&lt;&quot;Derived class:&quot;&lt;&lt;&quot;a=&quot;&lt;&lt;a&lt;&lt;&quot;,b=&quot;&lt;&lt;b&lt;&lt;endl;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void print_test( A&amp; obja)</span><br><span class="line">&#123;</span><br><span class="line">    obja.print();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int operator*(A&amp; a, A&amp; b)</span><br><span class="line">&#123;</span><br><span class="line">    return a.a * b.a;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int main(int argc, char *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    int a=2,b=4;</span><br><span class="line"></span><br><span class="line">    A obj1(a);</span><br><span class="line">    obj1.print();</span><br><span class="line"></span><br><span class="line">    B obj2(a+b,b);</span><br><span class="line">    obj2.print();</span><br><span class="line"></span><br><span class="line">    A&amp; obj3 = obj2;</span><br><span class="line">    obj3.print();</span><br><span class="line">    cout&lt;&lt;&quot;obj3.a=&quot;&lt;&lt;obj3.a&lt;&lt;endl;</span><br><span class="line">   // cout&lt;&lt;&quot;obj3.b=&quot;&lt;&lt;obj3.b&lt;&lt;endl; Error! class A has no member named &#x27;b&#x27;.</span><br><span class="line"></span><br><span class="line">    print_test(obj1);</span><br><span class="line">    print_test(obj2);</span><br><span class="line"></span><br><span class="line">    cout&lt;&lt;&quot;obj1 * obj2 :&quot;&lt;&lt; obj1 * obj2 &lt;&lt; endl;</span><br><span class="line"></span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>输出如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">base class:a=2</span><br><span class="line">Derived class:a=6,b=4</span><br><span class="line">base class:a=6</span><br><span class="line">obj3.a=6</span><br><span class="line">base class:a=2</span><br><span class="line">base class:a=6</span><br><span class="line">obj1 * obj2 :12</span><br></pre></td></tr></table></figure>
+
+<p>可以将上述程序中派生类对象赋值给基类的规律简单小结如下：</p>
+<ul>
+<li>当将基类的引用指向派生类的对象时，用该引用只能调用派生类从基类继承而来的成员。像上面程序中，obj3.a 输出的是 对象 obj2 的成员 a，但是 obj3 无法调用成员b。</li>
+<li>当一个函数需要的参数是基类的引用时，可以直接将派生类的对象传递给该函数，像上面的 <code>print_test</code> 函数和重载的 <code>*</code> 运算符那样。此事相当于作了一个隐式的将派生类对象赋值给基类引用。</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/">http://example.com/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B6%E4%BB%96/">其他</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/15/%E6%B6%A1%E7%9A%84%E5%8F%AF%E8%A7%86%E5%8C%96/" title="OpenFOAM4 中涡的可视化"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OpenFOAM4 中涡的可视化</div></div><div class="info-2"><div class="info-item-1">在 OpenFOAM4.1 中显示三维涡结构，核心方法是结合使用软件自带的 Q-criterion（Q准则）或 Lambda2（λ₂准则）等旋涡识别方法，并在后处理软件 ParaView 中进行可视化。  以下是具体的操作步骤与实现方法： 1. 在 OpenFOAM 中提取涡旋数据您可以在计算过程中或计算后通过添加函数对象（Function Objects）来提取涡量、Q准则或 Lambda2。 https://www.topcfd.cn/12128/  打开算例目录下的 system/controlDict 文件。 在文件末尾添加以下 functions 字典：  1234567891011121314151617181920functions&#123;    Q1	&#123;		type        Q;		libs            (&quot;libfieldFunctionObjects.so&quot;);		writeControl    writeTime;		log             true;		writeFields     true; 	...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 不可压缩湍流模型的 divDevReff 函数转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 3.0 版本之前，OpenFOAM 的单相流求解器如 pisoFoam 的动量方程中调用的是湍流模型的 divDevReff 函数来考虑雷诺应力项的作用。只是，细究起来，这个函数似乎有点小问题，本篇来探讨一下这些小问题。 OpenFOAM 中单相不可压缩求解器中，雷诺应力项调用的是湍流模型中的 divDevReff 函数。这个函数的返回值为$$\nabla \cdot(\nu_{eff}\nabla U)+\nabla \cdot\left [\nu_{eff}\nabla U^\mathrm{T}-\frac{1}{3} \nu_{eff} (\nabla \cdot U) \mathbf{I} \right ]$$这里有两个疑问，第一是为什么是 $\frac{1}{3}$ 而不是 $\frac{2}{3}$，对应到代码，即为什么用 dev 函数而不是 de...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89/" title="OpenFOAM-3.0 的湍流模型（二）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-3.0 的湍流模型（二）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-3.0 的湍流模型（二）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇分析 OpenFOAM-3.0 中湍流模型的 RTS 机制。RTS 机制主要是通过调用几个相关的宏函数来实现的，所以，分析 RTS 机制需要将相关的宏函数展开。四类湍流模型，机制是类似的，这里以单相不可压缩湍流模型为例，后文会给出所有其他湍流模型相关的宏函数的展开结果，供读者参考。RTS 机制的基础这里不再重复了，读者若对这里涉及到 RTS 机制的名称感兴趣，可以参考我以前对 RTS 机制的解读。 2. RTS 机制单相不可压缩湍流模型类，在 Make/files 文件里包含的其中一个是 src/TurbulenceModels/incompressible/turbulentTransportModels/turbulentTransportModels.C turbulentTransportModels.C，这个文件里包含了一些通用的湍流模型模板类，并调用了一些宏函数来实现...</div></div></div></a><a class="pagination-related" href="/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/" title="twoPhaseEulerFoam 全解读之三"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">twoPhaseEulerFoam 全解读之三</div></div><div class="info-2"><div class="info-item-1">twoPhaseEulerFoam 全解读之三转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 twoPhaseEulerFoam 中的 alphaEqn.H 进行详细地的解读，并作一些补充说明。 2.3. alphaEqn前文提到，经过求解 pEqn，并修正速度Ua和Ub以后，总体的连续性便得到了保证。为了得到分散相的体积分率alpha，还需要利用得到的速度场来求解分散相的连续性方程，即alphaEqn。分散相连续性方程可以表达如下：$$\frac{\partial \alpha_a}{\partial t}+\nabla \cdot (\alpha_a U_a)&#x3D;0$$ 为了让每一项都写成守恒形式，并且保证$\alpha_a$的有界性，Weller 将分散相连续性方程写成如下形式$$\frac{\partial...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 不可压缩湍流模型的 divDevReff 函数转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 3.0 版本之前，OpenFOAM 的单相流求解器如 pisoFoam 的动量方程中调用的是湍流模型的 divDevReff 函数来考虑雷诺应力项的作用。只是，细究起来，这个函数似乎有点小问题，本篇来探讨一下这些小问题。 OpenFOAM 中单相不可压缩求解器中，雷诺应力项调用的是湍流模型中的 divDevReff 函数。这个函数的返回值为$$\nabla \cdot(\nu_{eff}\nabla U)+\nabla \cdot\left [\nu_{eff}\nabla U^\mathrm{T}-\frac{1}{3} \nu_{eff} (\nabla \cdot U) \mathbf{I} \right ]$$这里有两个疑问，第一是为什么是 $\frac{1}{3}$ 而不是 $\frac{2}{3}$，对应到代码，即为什么用 dev 函数而不是 de...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%B8%89%EF%BC%89/" title="OpenFOAM 中的壁面函数（三）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的壁面函数（三）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的壁面函数（三）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 这篇来看看计算湍动能 $\varepsilon$ 和 $\omega$ 的壁面函数。 3. 湍动能耗散 $\varepsilon$ 的壁面函数本篇来看看 OpenFOAM 中的 epsilonWallFunction，共有两个： epsilonWallFunction 和 epsilonLowReWallFunction。  (1). epsilonWallFunction  epsilonWallFunction 代码比前面的 kqRWallFunction 复杂多了，主要原因在于这里需要得到的是 epsilon 在临近网格的值，而且，需要考虑包含两个边界面的网格。这里先来梳理代码的脉络，然后再看具体的计算细节。外部调用的主要是 updateCoeffs() 函数，所以，从这个函数看起。 1234567891011121314151617181920212223242526272829...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM-2.3.x%20%E4%B8%AD%E7%9A%84%20twoPhaseEulerFoam%20%E8%A7%A3%E6%9E%90%E4%B9%8B%20kineticTheoryModel%20%E7%9A%84%E5%AD%90%E6%A8%A1%E5%9E%8B/" title="OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里上一篇博文解读了 kineticTheoryModel 其中提到需要调用子模型来完成其功能，这里将 OpenFOAM 中 kineticTheoryModel 模型的子模型罗列如下。 1. viscosityModelviscosityModel 的作用是根据颗粒温度 Theta 来计算固相粘度。基类代码如下，核心是那个返回固相粘度的 nu 函数。 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071namespace Foam&#123;namespace kineticTheoryMod...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20div%20%E4%B8%8E%20snGrad%20%E6%93%8D%E4%BD%9C%E7%AC%A6/" title="OpenFOAM 中的 div 与 snGrad 操作符"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的 div 与 snGrad 操作符</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的 div 与 snGrad 操作符转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里OpenFOAM 的方便之处之一是利用C++的类模板和函数重载等技术定义了很多各种离散操作符，如div,laplacian,grad 等等。利用这些操作符，很容易就能对偏微分方程进行离散，并构建起线性方程组。但是，这些操作符真正执行的运算，却需要结合有限体积方法的本质来理解一番才能真正掌握。下面尝试着对 OpenFOAM 中的 div 和 snGrad 操作符进行一点解读。 1. div 操作符的本质div操作符表面看，是计算散度的，实际上，在OpenFAOM中，div 操作符的作用是加和，比如说 $ \nabla \cdot (UU)$，在OpenFOAM中表示为fvm::div(phi,U)，这段代码真正执行的是$\sum_f U_f \phi_f$运算，即将每个网格包含的面上的流率与速度乘积，然后再加起来。再比如，twoPhaseEulerFoam的UaEqn方程...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">52</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#C-%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2"><span class="toc-number">1.</span> <span class="toc-text">C++ 中派生类引用与基类引用的隐式转换</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/" title="C++ 中派生类引用与基类引用的隐式转换">C++ 中派生类引用与基类引用的隐式转换</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例">OpenFOAM 中求解 ODE 一例</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制">OpenFOAM 中的 Run Time Selection 机制</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'all',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || '6db13784fb4dcbfb40be0e6245985223'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

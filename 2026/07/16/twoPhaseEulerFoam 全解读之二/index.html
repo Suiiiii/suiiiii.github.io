@@ -1,0 +1,363 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>twoPhaseEulerFoam 全解读之二 | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="twoPhaseEulerFoam 全解读之二转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 twoPhaseEulerFoam 中的 U">
+<meta property="og:type" content="article">
+<meta property="og:title" content="twoPhaseEulerFoam 全解读之二">
+<meta property="og:url" content="http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%BA%8C/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="twoPhaseEulerFoam 全解读之二转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 twoPhaseEulerFoam 中的 U">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-07-16T08:46:34.000Z">
+<meta property="article:modified_time" content="2026-07-16T08:49:18.372Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="其他">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "twoPhaseEulerFoam 全解读之二",
+  "url": "http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%BA%8C/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-07-16T08:46:34.000Z",
+  "dateModified": "2026-07-16T08:49:18.372Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%BA%8C/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'twoPhaseEulerFoam 全解读之二',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">twoPhaseEulerFoam 全解读之二</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">twoPhaseEulerFoam 全解读之二</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-16T08:49:18.372Z" title="更新于 2026-07-16 10:49:18">2026-07-16</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h1 id="twoPhaseEulerFoam-全解读之二"><a href="#twoPhaseEulerFoam-全解读之二" class="headerlink" title="twoPhaseEulerFoam 全解读之二"></a>twoPhaseEulerFoam 全解读之二</h1><p>转自：<a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/%EF%BC%8C%E4%BE%B5%E5%88%A0">https://xiaopingqiu.github.io/，侵删</a></p>
+<p>仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里<br>本系列将对OpenFOAM-2.1.1 中的 <code>twoPhaseEulerFoam</code> 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 <code>twoPhaseEulerFoam</code> 中的 <code>UEqn.H</code> 和 <code>pEqn.H</code> 中的代码进行详细地的解读。</p>
+<h2 id="2-代码解读"><a href="#2-代码解读" class="headerlink" title="2. 代码解读"></a>2. 代码解读</h2><h3 id="2-1-UEqn"><a href="#2-1-UEqn" class="headerlink" title="2.1. UEqn"></a>2.1. UEqn</h3><p>前一篇导出了分散相的动量守恒方程<br>$$<br>\begin{aligned}<br>&amp;(1+\frac{\alpha_b \rho_b}{\rho_a} C_{vm})(\frac{\partial U_a}{\partial t} + U_a\cdot \nabla U_a ) -\nabla \cdot \left[ \nu_{eff} \nabla U_a \right ] + \nabla \cdot \left[ R_{c,a}\right] + \frac{\nabla(\alpha_a)}{\alpha_a} \cdot \left[ -\nu_{eff}\nabla U_a + R_{c,a}\right] \<br>&#x3D; &amp; -\frac{\alpha_b}{\rho_a} K U_a - \frac{\alpha_b}{\rho_a} \left{ {C_l (\alpha_b \rho_b + \alpha_a \rho_a) U_r \times (\nabla \times U) - C_{vm}\rho_b\left[ {\frac{\partial U_b}{\partial t} + U_b \cdot \nabla U_b }\right] } \right} -\frac{\nabla p}{\rho_a} + g + \frac{\alpha_b}{\rho_a} K U_b<br>\end{aligned}<br>$$<br>这一篇分析<code>twoPhaseEulerFoam</code>求解器是怎么来对动量方程进行离散的，以及，如果通过构建压力方程来对速度进行修正以保证两相的连续性。</p>
+<p>注意上述动量方程中，有两项还需要处理一下：<br>$$U_a \cdot \nabla U_a&#x3D;\nabla\cdot(U_aU_a)-U_a(\nabla\cdot U_a)$$</p>
+<p>$$\frac{\nabla(\alpha_a)}{\alpha_a}\cdot\left[-\nu_{eff} \nabla U_a\right] &#x3D; \nabla \cdot\left[ -\nu_{eff}\frac{(\nabla \alpha_a)}{\alpha_a} U_a \right]-U_a\left(\nabla\cdot(-\nu_{eff}\frac{\nabla \alpha_a}{\alpha_a}) \right)$$<br>转化前后的形式从数学上来等价的，但是在有限体积离散过程中，转化前的 $U_a \cdot \nabla U_a$ 和 $\frac{\nabla(\alpha_a)}{\alpha_a}\cdot\left[-\nu_{eff} \nabla U_a\right]$ 对于$U_a$来说是非守恒的，转化后的形式是守恒的(参考<a target="_blank" rel="noopener" href="http://www.sciencedirect.com/science/article/pii/S0029549309003021">这篇文献</a>，注意这样转化后，动量方程空间上是守恒的，但时间上仍是不守恒的，<a target="_blank" rel="noopener" href="http://www.cfd-online.com/Forums/openfoam-solving/71141-rewriting-twophaseeulerfoam-conservative-form.html">这个帖子</a>也有一些有价值的信息)。</p>
+<p>这样转化以后，得到的动量方程就跟<code>twoPhaseEulerFoam</code>里的定义是一模一样了:<br>$$<br>\begin{aligned}<br>&amp;(1+\frac{\alpha_b \rho_b}{\rho_a} C_{vm})\left(\frac{\partial U_a}{\partial t} + \nabla\cdot(U_aU_a)-U_a(\nabla\cdot U_a) \right)\<br>-&amp;\nabla \cdot \left[ \nu_{eff} \nabla U_a \right ] + \nabla \cdot \left[ R_{c,a}\right] +\nabla \cdot\left[ -\nu_{eff}\frac{(\nabla \alpha_a)}{\alpha_a}(\nabla U_a)\right]-U_a\left(\nabla\cdot(-\nu_{eff}\frac{\nabla \alpha_a}{\alpha_a}) \right) \<br>+ &amp; \frac{\nabla(\alpha_a)}{\alpha_a} \cdot \left[ R_{c,a}\right] \<br>&#x3D; &amp; -\frac{\alpha_b}{\rho_a} K U_a - \frac{\alpha_b}{\rho_a} \left{ {C_l (\alpha_b \rho_b + \alpha_a \rho_a) U_r \times (\nabla \times U) - C_{vm}\rho_b\left[ {\frac{\partial U_b}{\partial t} + U_b \cdot \nabla U_b }\right] } \right} \<br>-&amp;\frac{\nabla p}{\rho_a} + g + \frac{\alpha_b}{\rho_a} K U_b<br>\end{aligned}<br>$$</p>
+<p>下面将动量方程的每一项与<code>twoPhaseEulerFoam</code>的<code>UEqn.H</code>的代码一一对应。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(scalar(1) + Cvm*rhob*beta/rhoa)*</span><br><span class="line">            (</span><br><span class="line">                fvm::ddt(Ua)</span><br><span class="line">              + fvm::div(phia, Ua, &quot;div(phia,Ua)&quot;)</span><br><span class="line">              - fvm::Sp(fvc::div(phia), Ua)</span><br><span class="line">            )</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>fvm::ddt(Ua)</code>对应$\frac{\partial U_a}{\partial t}$，<code>phia</code>定义为<code>fvc::interpolate(Ua) &amp; mesh.Sf()</code>，于是<code>fvm::div(phia, Ua, &quot;div(phia,Ua)&quot;)</code> 和 <code>fvm::Sp(fvc::div(phia), Ua)</code> 便分别对应 $\nabla\cdot(U_aU_a)$ 和 $U_a(\nabla\cdot U_a)$了 <strong>[ *注一* ]</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">- fvm::laplacian(nuEffa, Ua)</span><br><span class="line">+ fvc::div(Rca)</span><br><span class="line">+ fvm::div(phiRa, Ua, &quot;div(phia,Ua)&quot;)</span><br><span class="line">- fvm::Sp(fvc::div(phiRa), Ua)</span><br></pre></td></tr></table></figure>
+
+<p><code>fvm::laplacian(nuEffa, Ua)</code>对应$\nabla \cdot \left[ \nu_{eff} \nabla U_a \right ]$，<code>fvc::div(Rca)</code>对应$\nabla \cdot \left[ R_{c,a}\right]$。<br><code>phiRa</code>的定义是</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">-fvc::interpolate(nuEffa)*mesh.magSf()*fvc::snGrad(alpha)</span><br><span class="line">            /fvc::interpolate(alpha + scalar(0.001))</span><br></pre></td></tr></table></figure>
+
+
+
+<p>相当于$-\nu_{eff}\frac{\nabla \alpha_a}{\alpha_a}$ <strong>[ *注二* ]</strong>。<br>于是 <code>fvm::div(phiRa, Ua, &quot;div(phia,Ua)&quot;)</code> 和 <code>fvm::Sp(fvc::div(phiRa), Ua)</code> 便分别对应 $\nabla \cdot\left[ -\nu_{eff} \frac{(\nabla \alpha_a)}{\alpha_a}(\nabla U_a)\right] $ 和 $U_a\left(\nabla\cdot(-\nu_{eff}\frac{\nabla \alpha_a}{\alpha_a}) \right)$。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(fvc::grad(alpha)/(fvc::average(alpha) + scalar(0.001)) &amp; Rca)</span><br></pre></td></tr></table></figure>
+
+<p>对应$\frac{\nabla(\alpha_a)}{\alpha_a} \cdot \left[ R_{c,a}\right]$，其中<code>&amp;</code>运算符已重载为计算矢量与张量的点乘积 <strong>[ *注三* ]</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"> ==</span><br><span class="line">//  g                          // Buoyancy term transfered to p-equation</span><br><span class="line">- fvm::Sp(beta/rhoa*K, Ua)</span><br><span class="line">//+ beta/rhoa*K*Ub             // Explicit drag transfered to p-equation</span><br><span class="line">- beta/rhoa*(liftCoeff - Cvm*rhob*DDtUb)</span><br><span class="line">        );</span><br></pre></td></tr></table></figure>
+
+<p><code>fvm::Sp(beta/rhoa*K, Ua)</code>对应 $\frac{\alpha_b}{\rho_a} K U_a$，<code>beta/rhoa*(liftCoeff - Cvm*rhob*DDtUb)</code> 对应<br>$$<br>\frac{\alpha_b}{\rho_a} \left{ {C_l (\alpha_b \rho_b + \alpha_a \rho_a) U_r \times (\nabla \times U) - C_{vm}\rho_b\left[ {\frac{\partial U_b}{\partial t} + U_b \cdot \nabla U_b }\right] } \right}<br>$$<br>其中变量<code>liftCoeff</code>定义为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">volVectorField liftCoeff(Cl*(beta*rhob + alpha*rhoa)*(Ur ^ fvc::curl(U)));</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>DDtUb</code>定义为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">DDtUb =</span><br><span class="line">        fvc::ddt(Ub)</span><br><span class="line">      + fvc::div(phib, Ub)</span><br><span class="line">      - fvc::div(phib)*Ub;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>重力 $g$ 以及曳力的显式项 $\frac{\alpha_b}{\rho_a} K U_b $ 如注释所述，将会在 <code>pEqn</code> 中考虑，压力梯度项 $\frac{\nabla p}{\rho_a}$ 则将在 <code>pEqn</code> 中用来约束两相的连续性。<br>至此动量方程的每一项都与<code>UEqn.H</code>的代码对应起来了。</p>
+<h3 id="2-2-pEqn"><a href="#2-2-pEqn" class="headerlink" title="2.2. pEqn"></a>2.2. pEqn</h3><p>压力方程的作用是修正两相速度$U_a$ 和 $U_b$以使速度满足连续性方程。将两相的连续性方程加起来，得到总体的连续性方程如下 <strong>[ *注四* ]</strong>：<br>$$\begin{aligned}<br>&amp; \frac{\partial \alpha_a}{\partial t} + \nabla \cdot (\alpha_a U_a) + \frac{\partial \alpha_b}{\partial t} + \nabla \cdot (\alpha_b U_b) \<br>&#x3D; &amp; \frac{\partial (\alpha_a+\alpha_b)}{\partial t} + \nabla \cdot (\alpha_a U_a+\alpha_b U_b) &#x3D; 0<br>\end{aligned}$$<br>由于$\alpha_a+\alpha_b&#x3D;1$，于是两相连续性方程等价于<br>$$<br>\nabla \cdot (\alpha_a U_a+\alpha_b U_b) &#x3D; 0<br>$$</p>
+<p>再来看压力方程是如何构建起来的。<br>完整的动量方程离散后，可以写作如下的统一形式：<br>$$<br>a_{p,a}U_{p,a}&#x3D;H(U_a)-\frac{\nabla p}{\rho_a}+\frac{\alpha_b}{\rho_a} K U_b +g<br>$$</p>
+<p>$$<br>a_{p,b}U_{p,b}&#x3D;H(U_b)-\frac{\nabla p}{\rho_b}+\frac{\alpha_a}{\rho_b} K U_a +g<br>$$<br>其中$H(U_a)$ 和 $H(U_b)$ 包含了动量方程中除 压力梯度项，显式曳力项以及重力项以后所有项的贡献。<br>由此离散方程可以得到 $U_a$ 和 $U_b$ 的表达式如下：<br>$$<br>U_{a}&#x3D;\frac{1}{a_{p,a}}H(U_a)-\frac{\nabla p}{a_{p,a}\rho_a}+\frac{\alpha_b}{ a_{p,a} \rho_a} K U_b +\frac{1}{a_{p,a}} g<br>$$</p>
+<p>$$<br>U_{b}&#x3D;\frac{1}{a_{p,b}}H(U_b)-\frac{\nabla p}{a_{p,b}\rho_b}+\frac{\alpha_a}{ a_{p,b} \rho_b} K U_a +\frac{1}{a_{p,b}} g<br>$$</p>
+<p>如果此 $U_a$ 和 $U_b$ 是方程组的解，那么它们必须满足整体的连续性方程，即<br>$$\begin{aligned}<br>&amp; \nabla \cdot \left[ \alpha_a (\frac{1}{a_{p,a}}H(U_a)-\frac{\nabla p}{a_{p,a}\rho_a}+\frac{\alpha_b}{ a_{p,a} \rho_a} K U_b +\frac{1}{a_{p,a}} g)\right] \<br>+ &amp; \nabla \cdot \left[ \alpha_b (\frac{1}{a_{p,b}}H(U_b)-\frac{\nabla p}{a_{p,b}\rho_b}+\frac{\alpha_a}{ a_{p,b} \rho_b} K U_a +\frac{1}{a_{p,b}} g ) \right] &#x3D; 0<br>\end{aligned}$$<br>将压力梯度项移到方程的一边，得到<br>$$\begin{aligned}<br>&amp; \nabla \cdot \left[ \alpha_a (\frac{1}{a_{p,a}}H(U_a)+\frac{\alpha_b}{ a_{p,a} \rho_a} K U_b +\frac{1}{a_{p,a}} g)\right] + \nabla \cdot \left[ \alpha_b (\frac{1}{a_{p,b}}H(U_b)+\frac{\alpha_a}{ a_{p,b} \rho_b} K U_a +\frac{1}{a_{p,b}} g ) \right] \<br>&#x3D; &amp;\nabla \cdot \left[ (\frac{\alpha_a }{a_{p,a}\rho_a} + \frac{\alpha_b }{a_{p,b}\rho_b}) \nabla p \right ]<br>\end{aligned}$$<br><strong>这便是压力修正方程的原型</strong>。<br>在<code>pEqn.H</code>中，压力方程其实修正的是界面通量，压力方程迭代收敛以后能保证界面通量的连续性。所以，散度表达式需要根据高斯定理写成界面通量之和的形式：<br>$$\begin{aligned}<br>&amp; \nabla \cdot \left[ \alpha_a (\frac{1}{a_{p,a}}H(U_a)+\frac{\alpha_b}{ a_{p,a} \rho_a} K U_b +\frac{1}{a_{p,a}} g)\right] \<br>&#x3D; &amp; (\alpha_a)<em>f \left[\sum_f(\frac{1}{a</em>{p,a}})<em>f H(U_a)\cdot S_f + \sum_f(\frac{\alpha_b K}{ a</em>{p,a} \rho_a})<em>f U_b \cdot S_f +\sum_f(\frac{1}{a</em>{p,a}})<em>f g \cdot S_f \right ]<br>\end{aligned}$$<br>下标 $<em>f$ 表示该项将要在代码中用界面上的变量来表示，在OpenFOAM中，即<code>surfaceScalarField</code>，$S_f$ 表示界面的面积矢量，下面的公式里也是一样。<br>$$\begin{aligned}<br>&amp; \nabla \cdot \left[ \alpha_b (\frac{1}{a</em>{p,b}}H(U_b)+\frac{\alpha_a}{ a</em>{p,b} \rho_b} K U_a +\frac{1}{a_{p,b}} g)\right] \<br>&#x3D; &amp; (\alpha_b)<em>f \left[\sum_f(\frac{1}{a</em>{p,b}})<em>f H(U_b)\cdot S_f + \sum_f(\frac{\alpha_a K}{ a</em>{p,b} \rho_b})<em>f U_a \cdot S_f +\sum_f(\frac{1}{a</em>{p,b}})_f g \cdot S_f \right]<br>\end{aligned}$$</p>
+<p>以及<br>$$<br>\nabla \cdot \left[ (\frac{\alpha_a }{a_{p,a}\rho_a} + \frac{\alpha_b }{a_{p,b}\rho_b}) \nabla p \right ] &#x3D; \sum_f (\frac{\alpha_a }{a_{p,a}\rho_a} + \frac{\alpha_b }{a_{p,b}\rho_b})_f (\nabla p) \cdot S_f<br>$$<br>下面是<code>pEqn</code>定义了几个跟界面通量有关的变量：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">surfaceScalarField alphaf(fvc::interpolate(alpha));</span><br><span class="line">surfaceScalarField betaf(scalar(1) - alphaf);</span><br><span class="line"></span><br><span class="line">volScalarField rUaA(1.0/UaEqn.A());</span><br><span class="line">volScalarField rUbA(1.0/UbEqn.A());</span><br><span class="line"></span><br><span class="line">phia == (fvc::interpolate(Ua) &amp; mesh.Sf());</span><br><span class="line">phib == (fvc::interpolate(Ub) &amp; mesh.Sf());</span><br><span class="line"></span><br><span class="line">rUaAf = fvc::interpolate(rUaA);</span><br><span class="line">surfaceScalarField rUbAf(fvc::interpolate(rUbA));</span><br><span class="line"></span><br><span class="line">Ua = rUaA*UaEqn.H();</span><br><span class="line">Ub = rUbA*UbEqn.H();</span><br><span class="line"></span><br><span class="line">surfaceScalarField phiDraga</span><br><span class="line">(</span><br><span class="line">    fvc::interpolate(beta/rhoa*K*rUaA)*phib + rUaAf*(g &amp; mesh.Sf())</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">surfaceScalarField phiDragb</span><br><span class="line">(</span><br><span class="line">    fvc::interpolate(alpha/rhob*K*rUbA)*phia + rUbAf*(g &amp; mesh.Sf())</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">phia = (fvc::interpolate(Ua) &amp; mesh.Sf()) + fvc::ddtPhiCorr(rUaA, Ua, phia) + phiDraga;</span><br><span class="line">phib = (fvc::interpolate(Ub) &amp; mesh.Sf()) + fvc::ddtPhiCorr(rUbA, Ub, phib) + phiDragb;</span><br><span class="line"></span><br><span class="line">phi = alphaf*phia + betaf*phib;</span><br><span class="line"></span><br><span class="line">surfaceScalarField Dp</span><br><span class="line">(</span><br><span class="line">    &quot;(rho*(1|A(U)))&quot;,</span><br><span class="line">    alphaf*rUaAf/rhoa + betaf*rUbAf/rhob</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>phiDraga</code> 和 <code>phiDragb</code> 分别对应 $(\frac{\alpha_b K}{ a_{p,a} \rho_a})<em>f U_b \cdot S_f +(\frac{1}{a</em>{p,a}})<em>f g \cdot S_f$ 和 $(\frac{\alpha_a K}{ a</em>{p,b} \rho_b})<em>f U_a \cdot S_f +(\frac{1}{a</em>{p,b}})_f g \cdot S_f$</p>
+<p>由于13-14行的定义，28-29行中的 <code>(fvc::interpolate(Ua) &amp; mesh.Sf())</code> 和 <code>(fvc::interpolate(Ub) &amp; mesh.Sf())</code> 便分别对应的是 $(\frac{1}{a_{p,a}})<em>f H(U_a)\cdot S_f$ 和 $(\frac{1}{a</em>{p,b}})_f H(U_b)\cdot S_f$ 。</p>
+<p>有了上面的定义，可以看出31行定义的<code>phi=alphaf*phia + betaf*phib</code>便表示了压力方程的左边。</p>
+<p>再看33-36行定义的<code>Dp</code>，很显然，表示的是压力方程右边的$(\frac{\alpha_a }{a_{p,a}\rho_a} + \frac{\alpha_b }{a_{p,b}\rho_b})_f$。</p>
+<p>有了以上的定义，便可以构建用于修正界面通量的压力方程了：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">fvScalarMatrix pEqn</span><br><span class="line">  (</span><br><span class="line">     fvm::laplacian(Dp, p) == fvc::div(phi)</span><br><span class="line">  );</span><br></pre></td></tr></table></figure>
+
+
+
+<p>如上所述，<code>pEqn</code>收敛以后，得到的就是满足连续性的界面通量了，然后再利用求得的界面通量来修正两相的速度，便得到了满足两相连续性的速度：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Ua += fvc::reconstruct(phiDraga - rUaAf*SfGradp/rhoa);</span><br><span class="line">Ua.correctBoundaryConditions();</span><br><span class="line"></span><br><span class="line">Ub += fvc::reconstruct(phiDragb - rUbAf*SfGradp/rhob);</span><br><span class="line">Ub.correctBoundaryConditions();</span><br><span class="line"></span><br><span class="line">U = alpha*Ua + beta*Ub;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>注意，<code>Ua</code>和<code>Ub</code>为什么是这样来修正呢？回想上面变量定义那个代码段的13-14行，这两行将<code>Ua</code>和<code>Ub</code>分别定义成了$\frac{1}{a_{p,a}} H(U_a)$ 和 $\frac{1}{a_{p,b}} H(U_b)$。<br>回想<code>Ua</code>和<code>Ub</code>的离散方程的统一形式<br>$$<br>U_{a}&#x3D;\frac{1}{a_{p,a}}H(U_a)-\frac{\nabla p}{a_{p,a}\rho_a}+\frac{\alpha_b}{ a_{p,a} \rho_a} K U_b +\frac{1}{a_{p,a}} g<br>$$</p>
+<p>$$<br>U_{b}&#x3D;\frac{1}{a_{p,b}}H(U_b)-\frac{\nabla p}{a_{p,b}\rho_b}+\frac{\alpha_a}{ a_{p,b} \rho_b} K U_a +\frac{1}{a_{p,b}} g<br>$$</p>
+<p>会发现13-14行定义的<code>Ua</code>和<code>Ub</code>都少了几项，所以缺了的这几项的贡献需要在速度修正步骤加回来，而<code>Ua+=</code>后面的<code>fvc::reconstruct(phiDraga - rUaAf*SfGradp/rhoa)</code>刚好就对应着<code>Ua</code>缺少的那几项。因为经过压力方程修正以后，界面通量是连续的，所以，将缺失的几项对应的界面通量通过<code>reconstruct</code>函数从界面通量重构从对体中心的速度的贡献，便得到了满足连续性的体中心速度了。对<code>Ub</code>也是同样的。</p>
+<p>经过以上步骤，便能得到满足整体连续性的两相速度<code>Ua</code> 和 <code>Ub</code>了。</p>
+<h2 id="注释"><a href="#注释" class="headerlink" title="注释"></a>注释</h2><p><strong>注一</strong>：OpenFOAM 里的<code>div</code>函数，字面意义上看起来好像是散度的意思，实际上，<code>div</code>函数执行的是<strong>加和</strong>运算。举例说，对于<code>fvc::div(phia)</code>，<code>phia</code>是<code>surfaceScalarField</code>，其值为<code>(fvc::interpolate(Ua) &amp; mesh.Sf())</code>，即将存储在体中心的<code>Ua</code>插值到每个网格对应的面的面心，然后用面心的速度与该面的面积矢量点乘。从代码中看，<code>fvc::div(phia)</code>对应的是 $\nabla \cdot U_a$，根据高斯定理，也就是 $\sum_f (U_a)_f \cdot S_f$，而<code>phia</code>对应着 $(U_a)_f \cdot S_f$，所以，<code>fvc::div(phia)</code>实际进行的运算是将包围每个网格的面上的通量加起来。更详细的说明见我的<a target="_blank" rel="noopener" href="http://xiaopingqiu.github.io/2015/05/17/OpenFOAMcode1/">另一篇博文</a>。<br><strong>注二</strong>：注意这里的$\frac{\nabla \alpha_a}{\alpha_a}$ 在代码中的表示方法，详细说明见我的<a target="_blank" rel="noopener" href="http://xiaopingqiu.github.io/2015/05/17/OpenFOAMcode1/">另一篇博文</a>。<br><strong>注三</strong>：注意这里的$\frac{\nabla \alpha_a}{\alpha_a}$ 在代码中的表示方法，以及与上一个$\frac{\nabla \alpha_a}{\alpha_a}$ 的区别，详细说明见我的<a target="_blank" rel="noopener" href="http://xiaopingqiu.github.io/2015/05/17/OpenFOAMcode1/">另一篇博文</a>。<br><strong>注四</strong>：这里说的总体的连续性方程指的是<strong>总体体积的守恒</strong>，而不是总体质量的守恒，这二者的差异见Henrik Rusche 的 PHD 论文 P112 的说明。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li>Henrik Rusche， PHD Thesis， Computational Fluid Dynamics of Dispersed Two-Phase Flows at High Phase Fractions， Imperial College of Science, Technology &amp; Medicine, Department of Mechanical Engineering, 2002</li>
+<li><a target="_blank" rel="noopener" href="https://openfoamwiki.net/index.php/BubbleFoam">https://openfoamwiki.net/index.php/BubbleFoam</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.cfd-online.com/Forums/openfoam-solving/71141-rewriting-twophaseeulerfoam-conservative-form.html">http://www.cfd-online.com/Forums/openfoam-solving/71141-rewriting-twophaseeulerfoam-conservative-form.html</a></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%BA%8C/">http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%BA%8C/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B6%E4%BB%96/">其他</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/16/%E4%B8%A4%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84%E9%9A%8F%E6%97%B6%E9%97%B4%E5%8F%98%E5%8C%96%E7%9A%84%E8%BE%B9%E7%95%8C%E6%9D%A1%E4%BB%B6/" title="两个简单的随时间变化的边界条件"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">两个简单的随时间变化的边界条件</div></div><div class="info-2"><div class="info-item-1">两个简单的随时间变化的边界条件转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里这一篇里介绍OpenFOAM自带的两个简单的随时间变化的边界条件： uniformFixedValue 和 flowRateInletVelocity 。 1. uniformFixedValue这个边界属于第一类边界，即直接指定边界上某个量的值。跟 fixedValue 的不同之处在于，这个边界条件允许边界上的值随着时间变化。一般的用法如下： 12345678type            uniformFixedValue;uniformValue     table(    (0.000 (0 0 0.002))    (0.010 (0 0 0.002))    (0.011 (0.011 0 0.011))    (0.100 (0.10 0 0.100)));  上面这一段指定的是速度 U （也可以是其他矢量，或者标量）的边界条件，通过一个 table 来定义边界随时间的变化行为，具...</div></div></div></a><a class="pagination-related" href="/2026/07/16/%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%B0%86%E5%A3%B0%E6%98%8E%E5%92%8C%E5%AE%9A%E4%B9%89%E5%88%86%E7%A6%BB/" title="为什么要将声明和定义分离"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">为什么要将声明和定义分离</div></div><div class="info-2"><div class="info-item-1">为什么要将声明和定义分离转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里OpenFOAM 中的类基本都遵循类的声明和定义分开在不同文件的规则。具体来说，一般是类的声明放在 “xxx.H”，类的成员函数的具体定义 “xxx.C”，如果有内联函数(inline)，则还有 “xxxI.H”，并且，”xxx.H” 文件的最后会有 #include &quot;xxxI.H&quot;。这么做不仅是一种代码规范，真正的目的应该是为了防止重复定义的问题。本篇博文用一个简单的例子来说明这个问题。 为了防止混淆，先说明一下概念：  函数声明：即只声明函数的返回类型，函数名以及参数列表，没有函数体，不具体定义函数的功能，比如  1int max(int a, int b);   函数定义：包含函数体,具体定义函数的功能。比如  1234567int max(int a, int b)&#123;    if (a&lt;b)        return b;    else        ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%B8%89%EF%BC%89/" title="OpenFOAM-3.0 的湍流模型（三）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-3.0 的湍流模型（三）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-3.0 的湍流模型（三）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里有了上一篇的基础，就很容易做到添加新的湍流模型了，这里分别给出对四类湍流模型增加新模型的方法。探索过程不详述了，仅给出结果。 3. 添加新模型的方法。添加湍流模型，关键的有两个，一是如果将新湍流模型添加到合适的 hashTable，以便能被求解器调用，另一个是 Make&#x2F;files 和 Make&#x2F;options 的写法以使湍流模型能被编译。 这里不给出具体湍流模型的代码，仅给出 Make 的写法，以及一个 .C 文件。编译湍流模型的时候，新建一个目录，将需要编译的湍流模型代码、这里给出的对应类型的 .C 文件和 Make 文件夹都拷贝到新建的目录，然后运行 wmake libso 即可。 3.1 单相不可压缩湍流模型 makeTuebulenceModels.C  12345678910111213141516171819202122232425262728293...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的单相流湍流模型之SpalartAllmaras转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇简要分析不可压缩的 SpalartAllmaras 模型的代码。主要内容包括模型输运方程的代码说明，以及一些使用方面的细节。 湍流模型代码实例这一部分分析几个 OpenFOAM 里自带的湍流模型， 并探讨修改或者添加新湍流模型的方法。 1 SpalartAllmaras 模型1.1. 模型分析SpalartAllmaras 模型是一方程模型，它只需要求解一个输运方程。OpenFOAM 中的 SpalartAllmaras 模型是在原始论文[1] 的基础上，引入了 Ashford [2] 对这个模型的修正。下面来看这个模型在 OpenFOAM 中的实现，代码位于 src/turbulenceModels/incompressible/RAS/SpalartAllmaras首先是头文件， SpalartAllmaras.H头文件开始，声明了一个类：Spala...</div></div></div></a><a class="pagination-related" href="/2026/07/16/%E5%88%A9%E7%94%A8functionObjects%E5%AF%B9%E6%8C%87%E5%AE%9A%E5%8C%BA%E5%9F%9F%E5%86%85%E8%BF%9B%E8%A1%8C%E5%90%8E%E5%A4%84%E7%90%86/" title="利用functionObjects对指定区域内进行后处理"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">利用functionObjects对指定区域内进行后处理</div></div><div class="info-2"><div class="info-item-1">利用functionObjects对指定区域内进行后处理转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里CFD中很重要的一个环节是模拟结果的后处理。而后处理过程中，常常涉及到对某个指定区域的某个物理量进行操作，比如，求指定截面上的流率，或者求某个区域内的平均空隙率，等等。这里介绍一种利用 OpenFOAM 中的 functionObjects 来对指定区域进行后处理的方法。本方法一共分三步：1). 将指定区域内的网格(或者面)提取到 cellZone（或faceZone）; 2). 在 controlDict 里写后处理 functions；3). 运行后处理。 1. 将指定区域的网格(或面)提取到 cellZone (或faceZone)这一步有很多方法可以实现，这里介绍用setSet结合setsToZones的方法。 1.1 setSet的基本用法setSet是 OpenFOAM 提供的一个用于生成网格集合(cellSet)、面集合（faceSet）以及点集合（poi...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%B8%80%EF%BC%89/" title="OpenFOAM-3.0 的湍流模型（一）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-3.0 的湍流模型（一）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-3.0的湍流模型（一）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列分析 OpenFOAM-3.0 版本的湍流模型。从 3.0 版开始，OpenFOAM 中的湍流模型架构发生了较大的变化，其实这种变化在 2.3 版开始已经初露端倪，在 2.3 版里，多相流的湍流模型已经开始跟单相流湍流模型分开。从 3.0 开始，单相流湍流模型和多相流湍流模型统一到了一个架构下。本系列将对 3.0 版的湍流模型进行详细的分析，分为四部分：结构概览，RTS 机制分析，编译新模型的方法，以及一些补充说明。 1. 结构概览这部分主要是概括一下湍流模型的框架的结构，如下图（请点击右键查看大图）： 湍流模型的架构 图片中，蓝色字体的是类名，绿框中的类是调用 declareRunTimeSeclectionTable 的类（如果对这个的含义感兴趣，建议参考这篇或者这篇），四种不同颜色的箭头，代表的是四种不同的湍流模型：单相不可压缩湍流模型，单相可压缩湍流模型，多相不可压缩模型...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM-2.3.x%20%E4%B8%AD%E7%9A%84%20twoPhaseEulerFoam%20%E8%A7%A3%E6%9E%90%E4%B9%8B%20kineticTheoryModel%20%E7%9A%84%E5%AD%90%E6%A8%A1%E5%9E%8B/" title="OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里上一篇博文解读了 kineticTheoryModel 其中提到需要调用子模型来完成其功能，这里将 OpenFOAM 中 kineticTheoryModel 模型的子模型罗列如下。 1. viscosityModelviscosityModel 的作用是根据颗粒温度 Theta 来计算固相粘度。基类代码如下，核心是那个返回固相粘度的 nu 函数。 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071namespace Foam&#123;namespace kineticTheoryMod...</div></div></div></a><a class="pagination-related" href="/2026/07/16/fvOptions%20%E6%B5%85%E6%9E%90/" title="fvOptions 浅析"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">fvOptions 浅析</div></div><div class="info-2"><div class="info-item-1"> fvOptions 浅析  转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里   本篇简单介绍 OpenFOAM 中的 fvOptions。按照官方的介绍，fvOptions 是一个可以在指定区域内添加源项或者其他约束（比如固定温度，或者多孔介质等）的框架。本篇对 fvOptions 框架的源码做一个浅析。    先来了解一下 fvOptions 框架的结构，以及，在求解器中是怎么调用 fvOptions 的。为了避免问题复杂化，先从一个简单的求解器开始：scalarTransportFoam。OpenFOAM-2.3.1 中的 scalarTransportFoam 中已经引入了 fvOptions ，而更早的 OpenFOAM-2.1.1 中，则没有使用 fvOptions 。对比之下，很容易发现引入 fvOptions 其实就只涉及到两处代码修改：1. 增加了一个头文件 createFvOptions.H；2. 在 T 方程中增加了一项 fvOptions(T) ...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">52</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#twoPhaseEulerFoam-%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%BA%8C"><span class="toc-number">1.</span> <span class="toc-text">twoPhaseEulerFoam 全解读之二</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%BB%A3%E7%A0%81%E8%A7%A3%E8%AF%BB"><span class="toc-number">1.1.</span> <span class="toc-text">2. 代码解读</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-UEqn"><span class="toc-number">1.1.1.</span> <span class="toc-text">2.1. UEqn</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-pEqn"><span class="toc-number">1.1.2.</span> <span class="toc-text">2.2. pEqn</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B3%A8%E9%87%8A"><span class="toc-number">1.2.</span> <span class="toc-text">注释</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">1.3.</span> <span class="toc-text">参考资料</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/" title="C++ 中派生类引用与基类引用的隐式转换">C++ 中派生类引用与基类引用的隐式转换</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例">OpenFOAM 中求解 ODE 一例</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制">OpenFOAM 中的 Run Time Selection 机制</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'all',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || '999e86c2699557f22a5a97e56b1fc8c4'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

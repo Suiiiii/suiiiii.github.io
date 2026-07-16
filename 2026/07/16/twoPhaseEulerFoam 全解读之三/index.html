@@ -1,0 +1,361 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>twoPhaseEulerFoam 全解读之三 | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="twoPhaseEulerFoam 全解读之三转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 twoPhaseEulerFoam 中的 a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="twoPhaseEulerFoam 全解读之三">
+<meta property="og:url" content="http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="twoPhaseEulerFoam 全解读之三转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 twoPhaseEulerFoam 中的 a">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-07-16T08:46:34.000Z">
+<meta property="article:modified_time" content="2026-07-16T08:49:18.320Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="其他">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "twoPhaseEulerFoam 全解读之三",
+  "url": "http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-07-16T08:46:34.000Z",
+  "dateModified": "2026-07-16T08:49:18.320Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'twoPhaseEulerFoam 全解读之三',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">twoPhaseEulerFoam 全解读之三</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">twoPhaseEulerFoam 全解读之三</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-16T08:49:18.320Z" title="更新于 2026-07-16 10:49:18">2026-07-16</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h1 id="twoPhaseEulerFoam-全解读之三"><a href="#twoPhaseEulerFoam-全解读之三" class="headerlink" title="twoPhaseEulerFoam 全解读之三"></a>twoPhaseEulerFoam 全解读之三</h1><p>转自：<a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/%EF%BC%8C%E4%BE%B5%E5%88%A0">https://xiaopingqiu.github.io/，侵删</a></p>
+<p>仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里<br>本系列将对OpenFOAM-2.1.1 中的 <code>twoPhaseEulerFoam</code> 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 <code>twoPhaseEulerFoam</code> 中的 <code>alphaEqn.H</code> 进行详细地的解读，并作一些补充说明。</p>
+<h3 id="2-3-alphaEqn"><a href="#2-3-alphaEqn" class="headerlink" title="2.3. alphaEqn"></a>2.3. alphaEqn</h3><p>前文提到，经过求解 <code>pEqn</code>，并修正速度<code>Ua</code>和<code>Ub</code>以后，总体的连续性便得到了保证。为了得到分散相的体积分率<code>alpha</code>，还需要利用得到的速度场来求解分散相的连续性方程，即<code>alphaEqn</code>。分散相连续性方程可以表达如下：<br>$$<br>\frac{\partial \alpha_a}{\partial t}+\nabla \cdot (\alpha_a U_a)&#x3D;0<br>$$</p>
+<p>为了让每一项都写成守恒形式，并且保证$\alpha_a$的有界性，Weller 将分散相连续性方程写成如下形式<br>$$<br>\frac{\partial \alpha_a}{\partial t}+\nabla \cdot (\alpha_a U)+\nabla \cdot(U_r\alpha_a(1-\alpha_a))&#x3D;0<br>$$<br>其中<br>$$<br>U&#x3D;\alpha_a U_a + \alpha_b U_b \<br>U_r&#x3D;U_a-U_b<br>$$<br>OpenFOAM-2.1.1 的<code>alphaEqn</code>求解的正是 Weller 提出的形式。主要的代码如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">fvScalarMatrix alphaEqn</span><br><span class="line">       (</span><br><span class="line">            fvm::ddt(alpha)</span><br><span class="line">          + fvm::div(phic, alpha, scheme)</span><br><span class="line">          + fvm::div(-fvc::flux(-phir, beta, schemer), alpha, schemer)</span><br><span class="line">       );</span><br></pre></td></tr></table></figure>
+
+
+
+<p>其中<code>phic</code>与<code>phir</code>的定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">surfaceScalarField phic(&quot;phic&quot;, phi);</span><br><span class="line">surfaceScalarField phir(&quot;phir&quot;, phia - phib);</span><br></pre></td></tr></table></figure>
+
+
+
+<p>得到分散相体积分率后，连续相体积分率$\alpha_b$则为$1-\alpha_a$，如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">beta = scalar(1) - alpha;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="3-补充说明"><a href="#3-补充说明" class="headerlink" title="3. 补充说明"></a>3. 补充说明</h2><p>想必读者肯定发现了，我前面的代码解读相比于<code>twoPhaseEulerFoam</code>的源码其实省略了很多，总体上来讲，省略了三大块，一是跟<code>kineticTheory</code>相关的，二是跟<code>g0</code>相关的，三是<code>packingLimiter</code>，下面对这三部分进行一些补充说明。</p>
+<h3 id="3-1-kineticTheory"><a href="#3-1-kineticTheory" class="headerlink" title="3.1 kineticTheory"></a>3.1 kineticTheory</h3><p><code>kineticTheory</code>是 KTGF(Kinetic Theory of Granular Flow) 方法在OpenFOAM-2.1.1里的实现。KTGF 的主要作用是计算固相压力和固相粘度，以封闭前述的分散相动量方程，所以<code>kineticTheory</code>只有在模拟气固（液固）两相流时才需要开启。 <code>kineticTheory</code> 是否开启以及 KTGF 模型的参数需要在算例的<code>constant/kineticTheoryProperties</code>文件里进行设置。如果开启了<code>kineticTheory</code>，主要的影响如下：</p>
+<ul>
+<li><p>UEqn.H</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">if (kineticTheory.on())</span><br><span class="line">&#123;</span><br><span class="line">    kineticTheory.solve(gradUaT);</span><br><span class="line">    nuEffa = kineticTheory.mua()/rhoa;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果开启<code>kineticTheory</code>，则固相粘度<code>nuEffa</code>是由 KTGF 来计算得到，否则<code>nuEffa</code>是用一个简单的关联式来计算</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">else</span><br><span class="line">&#123;</span><br><span class="line">    nuEffa = sqr(Ct)*nutb + nua;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>此外，<code>Rca</code>项也要加上额外的项</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if (kineticTheory.on())</span><br><span class="line">&#123;</span><br><span class="line">    Rca -= ((kineticTheory.lambda()/rhoa)*tr(gradUaT))*tensor(I);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>pEqn.H<br>如果<code>kineticTheory</code>开启了，则要在压力修正方程中加上额外的固相压力项。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if (kineticTheory.on())</span><br><span class="line">&#123;</span><br><span class="line">    phiDraga -= rUaAf*fvc::snGrad(kineticTheory.pa()/rhoa)*mesh.magSf();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>有关 OpenFOAM 中使用的 KTGF 模型的理论可以参考<a target="_blank" rel="noopener" href="http://repository.tudelft.nl/view/ir/uuid%3A919e2efa-5db2-40e6-9082-83b1416709a6/">Derivation, Implementation, and Validation of Computer Simulation Models for Gas-Solid Fluidized Beds</a>，以及B.G.M. van Wachem 的其他相关论文。</p>
+<h3 id="3-2-g0"><a href="#3-2-g0" class="headerlink" title="3.2 g0"></a>3.2 g0</h3><p>跟 <code>kineticTheory</code>一样，<code>g0</code> 也是只有在模拟气固（液固）两相流时才需要开启，相关的设置在<code>constant/ppProperties</code>里，当<code>g0</code>的值设置为大于零时，则跟<code>g0</code>相关的项会其作用，主要的影响如下：</p>
+<ul>
+<li><p>pEqn</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if (g0.value() &gt; 0.0)</span><br><span class="line">&#123;</span><br><span class="line">    phiDraga -= ppMagf*fvc::snGrad(alpha)*mesh.magSf();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中<code>ppMagf</code>的定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ppMagf = rUaAf*fvc::interpolate</span><br><span class="line">(</span><br><span class="line"> (1.0/(rhoa*(alpha + scalar(0.0001))))</span><br><span class="line"> *g0*min(exp(preAlphaExp*(alpha - alphaMax)), expMax)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>这一段的效果，相当于在<a target="_blank" rel="noopener" href="http://xiaopingqiu.github.io/2015/05/17/twoPhaseEulerFoam1/">本系列第一篇</a>最后的分散相动量方程的等式右边额外增加一项：<br>$$<br>-g0<em>min(e^{preAlphaExp</em>(\alpha_a - \alpha_{Max})},expMax)\nabla \alpha_a &#x2F; (\alpha_a \rho_a)<br>$$<br>可见，这一项的作用是给固相额外施加了一个力，可以认为是固相压力，这个力与$\alpha_a$的梯度有关，且与梯度的方向相反。<br>注意这一项的特点：<code>g0</code>, <code>preAlphaExp</code>, <code>alphaMax</code>, <code>expMax</code> 都是需要用户指定的参数，一般将<code>g0</code>, <code>preAlphaExp</code>和<code>expMax</code>设置为一个比较大的正整数（$10^3$的量级），当<code>alpha - alphaMax &lt; 0</code>时，$e^{,preAlphaExp*(\alpha_a - \alpha_{Max})}$ 将是一个很小的数，此时整个增加的一项也将是一个较小的数，所以，<code>alpha - alphaMax &lt; 0</code>时额外增加的那一项对动量方程的贡献很小。但是，当<code>alpha - alphaMax &gt; 0</code>时，随着 <code>alpha</code> 偏离 <code>alphaMax</code> 越来越远，<code>exp(preAlphaExp*(alpha - alphaMax)</code>将迅速增大，<code>min(exp(preAlphaExp*(alpha - alphaMax)), expMax)</code>的值也将迅速增大，直到设定值<code>expMax</code>。可见，<code>g0</code>项的作用可以理解为为了防止固相过度堆积。气固系统中，固相的体积分率是有上限的，可以将<code>alphaMax</code>设置为这个上限值，当某个网格里的<code>alpha</code>超过设定的<code>alphaMax</code>时，就让固相迅速弹开，以防止固相体积分率过大。</p>
+</li>
+<li><p>alphaEqn.H<br>alphaEqn.H 里有两处跟 <code>g0</code> 有关的，<br>一处是对 <code>phic</code> 和 <code>phir</code> 进行修正：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">if (g0.value() &gt; 0.0)</span><br><span class="line">&#123;</span><br><span class="line">    surfaceScalarField alphaf(fvc::interpolate(alpha));</span><br><span class="line">    surfaceScalarField phipp(ppMagf*fvc::snGrad(alpha)*mesh.magSf());</span><br><span class="line">    phir += phipp;</span><br><span class="line">    phic += fvc::interpolate(alpha)*phipp;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>另一处是对 <code>alphaEqn</code> 进行修正：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">if (g0.value() &gt; 0.0)</span><br><span class="line">&#123;</span><br><span class="line">    ppMagf = rUaAf*fvc::interpolate</span><br><span class="line">    (</span><br><span class="line">     (1.0/(rhoa*(alpha + scalar(0.0001))))</span><br><span class="line">     *g0*min(exp(preAlphaExp*(alpha - alphaMax)), expMax)</span><br><span class="line">     );</span><br><span class="line">    </span><br><span class="line">    alphaEqn -= fvm::laplacian</span><br><span class="line">    (</span><br><span class="line">     (fvc::interpolate(alpha) + scalar(0.0001))*ppMagf,</span><br><span class="line">     alpha,</span><br><span class="line">     &quot;laplacian(alphaPpMag,alpha)&quot;</span><br><span class="line">     );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>为什么当 <code>g0 &gt; 0</code> 时，需要在 <code>alphaEqn</code> 中额外减去一个 <code>laplacian</code> 项呢？这里要结合上面提到的两段代码来进行分析。<br>在对 <code>phic</code> 和 <code>phir</code> 进行修正这一段， <code>phic</code> 和 <code>phir</code> 分别加上了一项。将修正过的 <code>phic</code> 和 <code>phir</code> 代入到 <code>alphaEqn</code> 中，会导致 <code>alphaEqn</code> 与上文的分散相连续性方程<br>$$<br>\frac{\partial \alpha_a}{\partial t}+\nabla \cdot (\alpha_a U)+\nabla \cdot(U_r\alpha_a(1-\alpha_a))&#x3D;0<br>$$<br>不一致，其中 <code>alphaEqn</code> 多出了几项：<br>其中<br><code>fvm::div(phic, alpha, scheme)</code> 比 $ \nabla \cdot (\alpha_a U) $ 多了 <code>fvm::div(alphaf*phipp, alpha, scheme)</code> 一项，写成公式，就是 $ \nabla \cdot [\alpha (\alpha *\mathrm{ppMagf}) \nabla \alpha] $ 。</p>
+<p>而 <code>fvm::div(-fvc::flux(-phir, beta, schemer), alpha, schemer)</code> 则比 $ \nabla \cdot (\alpha_a U)+\nabla \cdot(U_r\alpha_a(1-\alpha_a) $ 多出了 <code>fvm::div(-fvc::flux(-phipp, beta, schemer), alpha, schemer)</code> 一项，写成公式就是 $ \nabla \cdot [\alpha (\beta *\mathrm{ppMagf}) \nabla \alpha] $ 。<br>多出的这两项加起来，为<br>$$<br>\nabla \cdot [\alpha *\mathrm{ppMagf} \ \nabla \alpha]<br>$$</p>
+<p>对比上面的 <code>alphaEqn</code> 减去的 <code>laplacian</code> 项，会发现这一项跟那个 <code>laplacian</code> 是一样的。</p>
+<p>所以，<code>g0 &gt; 0</code> 时，先将固相压力带来的通量代入到 <code>alphaEqn</code> 的构建中，然后再减去对应的 <code>laplacian</code> 项，这么做的目的，应该是为了计算稳定性以及保证 <code>alpha</code> 的有界性（保证 $0&lt;alpha&lt;alphaMax$）。但是这背后的数值原理，我也没有完全理解。</p>
+<p>最后，有必要说明一下，<code>g0</code>相关的项其实就是在动量方程中增加了一项颗粒压力，想要达到的效果是防止固相过度堆积。<code>kineticTheory</code>开启后将计算颗粒相的应力，其中包括了颗粒相压力。所以 <code>g0</code>可以当作 KTGF 的某种简单的替代。从原理上讲，<code>kineticTheory</code>和<code>g0</code>不应该同时开启。</p>
+<h3 id="3-3-packingLimiter"><a href="#3-3-packingLimiter" class="headerlink" title="3.3 packingLimiter"></a>3.3 packingLimiter</h3><p>packingLimiter 的作用，从名字可以看出，也是用来处理过度堆积问题的。packingLimiter 缺乏理论基础，仅仅是一种不甚高明的数值技巧，其主要的处理是定义了一个</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">volScalarField alphaEx(max(alpha - alphaMax, scalar(0)));</span><br></pre></td></tr></table></figure>
+
+
+
+<p>当<code>alpha - alphaMax &gt; 0</code>时，<code>alphaEx = alpha - alphaMax &gt; 0</code>，否则<code>alphaEx = 0</code>。<br>packingLimiter 本质操作是，当某个网格的固相体积分率超过设定的最大值时，就让该网格的固相往它的邻居网格匀一匀，就是这么简(ren)单(xing)。所以，一般情况下，不建议开启packingLimiter。</p>
+<p>至此，OpenFOAM-2.1.1 版本的<code>twoPhaseEulerFoam</code>便解读完了。最近的 OpenFOAM-2.3 系列中的<code>twoPhaseEulerFoam</code> 变化很大，求解的是全守恒形式的动量方程了（而不是 phase-intensive形式的），耦合了传热模型，考虑了可压缩效应，而且alphaEqn的求解不再是利用隐式迭代的方式，而是改成了用 MULES 方法来求解。这些有待于下一步进行解读。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li>Henrik Rusche， PHD Thesis， Computational Fluid Dynamics of Dispersed Two-Phase Flows at High Phase Fractions， Imperial College of Science, Technology &amp; Medicine, Department of Mechanical Engineering, 2002</li>
+<li><a target="_blank" rel="noopener" href="https://openfoamwiki.net/index.php/BubbleFoam">https://openfoamwiki.net/index.php/BubbleFoam</a></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/">http://example.com/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B6%E4%BB%96/">其他</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/16/fvOptions%20%E4%B9%8B%20semiImplicitSource/" title="fvOptions 之 semiImplicitSource"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">fvOptions 之 semiImplicitSource</div></div><div class="info-2"><div class="info-item-1">fvOptions 之 semiImplicitSource转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里上篇浅析了 fvOptions 框架的结构，这篇来看一个具体的源项类： semiImplicitSource 。 先来看看这个源项代码中的关键部分。  SemiImplicitSource.C 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123124125126127128129130131132133...</div></div></div></a><a class="pagination-related" href="/2026/07/16/%E4%B8%A4%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84%E9%9A%8F%E6%97%B6%E9%97%B4%E5%8F%98%E5%8C%96%E7%9A%84%E8%BE%B9%E7%95%8C%E6%9D%A1%E4%BB%B6/" title="两个简单的随时间变化的边界条件"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">两个简单的随时间变化的边界条件</div></div><div class="info-2"><div class="info-item-1">两个简单的随时间变化的边界条件转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里这一篇里介绍OpenFOAM自带的两个简单的随时间变化的边界条件： uniformFixedValue 和 flowRateInletVelocity 。 1. uniformFixedValue这个边界属于第一类边界，即直接指定边界上某个量的值。跟 fixedValue 的不同之处在于，这个边界条件允许边界上的值随着时间变化。一般的用法如下： 12345678type            uniformFixedValue;uniformValue     table(    (0.000 (0 0 0.002))    (0.010 (0 0 0.002))    (0.011 (0.011 0 0.011))    (0.100 (0.10 0 0.100)));  上面这一段指定的是速度 U （也可以是其他矢量，或者标量）的边界条件，通过一个 table 来定义边界随时间的变化行为，具...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 不可压缩湍流模型的 divDevReff 函数转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 3.0 版本之前，OpenFOAM 的单相流求解器如 pisoFoam 的动量方程中调用的是湍流模型的 divDevReff 函数来考虑雷诺应力项的作用。只是，细究起来，这个函数似乎有点小问题，本篇来探讨一下这些小问题。 OpenFOAM 中单相不可压缩求解器中，雷诺应力项调用的是湍流模型中的 divDevReff 函数。这个函数的返回值为$$\nabla \cdot(\nu_{eff}\nabla U)+\nabla \cdot\left [\nu_{eff}\nabla U^\mathrm{T}-\frac{1}{3} \nu_{eff} (\nabla \cdot U) \mathbf{I} \right ]$$这里有两个疑问，第一是为什么是 $\frac{1}{3}$ 而不是 $\frac{2}{3}$，对应到代码，即为什么用 dev 函数而不是 de...</div></div></div></a><a class="pagination-related" href="/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%80/" title="twoPhaseEulerFoam 全解读之一"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">twoPhaseEulerFoam 全解读之一</div></div><div class="info-2"><div class="info-item-1">twoPhaseEulerFoam 全解读之一转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇进行方程推导，详细介绍如果从双流体模型出发得到 twoPhaseEulerFoam 中的 UEqn.H 对应的模型方程形式。 1. 方程推导双流体模型方程可以表达成如下形式： 连续性方程：$$\frac{\partial(\alpha_\phi\rho_\phi)}{\partial t}+\nabla\cdot(\alpha_\phi\rho_\phi U_\phi)&#x3D;0$$动量守恒方程:$$\frac{\partial(\alpha_\phi\rho_\phi U_\phi)}{\partial t}+\nabla\cdot(\alpha_\phi\rho_\phi U_\phi U_\phi)+\nabla\cdot(...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E8%BE%B9%E7%95%8C%E6%9D%A1%E4%BB%B6%EF%BC%88%E4%BA%8C%EF%BC%89/" title="OpenFOAM 中的边界条件（二）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的边界条件（二）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的边界条件（二）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇在上一篇的基础上来解读 OpenFOAM 中的基础边界条件。基础边界条件一般包括三类，一是Dirichlet 边界，二是 Neumann 边界，三是混合 Dirichlet 和 Neumann 的边界。 1. fixedValue这个是 OpenFOAM 中的 Dirichlet 边界条件。  构造函数 12345678910template&lt;class Type&gt;fixedValueFvPatchField&lt;Type&gt;::fixedValueFvPatchField(    const fvPatch&amp; p,    const DimensionedField&lt;Type, volMesh&gt;&amp; iF,    const dictionary&amp; dict):    fvPatchField&lt;Type&gt;(p, iF, ...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM-2.3.x%20%E4%B8%AD%E7%9A%84%20twoPhaseEulerFoam%20%E8%A7%A3%E6%9E%90%E4%B9%8B%20kineticTheoryModel%20%E7%9A%84%E5%AD%90%E6%A8%A1%E5%9E%8B/" title="OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel 的子模型转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里上一篇博文解读了 kineticTheoryModel 其中提到需要调用子模型来完成其功能，这里将 OpenFOAM 中 kineticTheoryModel 模型的子模型罗列如下。 1. viscosityModelviscosityModel 的作用是根据颗粒温度 Theta 来计算固相粘度。基类代码如下，核心是那个返回固相粘度的 nu 函数。 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071namespace Foam&#123;namespace kineticTheoryMod...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%A3%81%E9%9D%A2%E5%87%BD%E6%95%B0%EF%BC%88%E4%BA%8C%EF%BC%89/" title="OpenFOAM 中的壁面函数（二）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的壁面函数（二）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的壁面函数（二）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 这篇来看看计算湍动能 $k$ 的壁面函数。 2. 湍流动能 $k$ 的壁面函数OpenFOAM 中提供了两种 $k$ 的壁面函数， kqRWallFunction 和 kLowReWallFunction 。  kqRWallFunction其实就是 zeroGradient ，无需多言。除非使用 $v^2\text{-}f$ 模型，一般情况下 $k$ 应该使用这个边界条件。  kLowReWallFunction这个壁面函数应该是可以用于低雷诺数模型的。该壁面函数继承自 fixedValue ： 123456789101112131415161718192021222324252627282930313233343536373839class kLowReWallFunctionFvPatchScalarField:    public fixedValueFvPatchField&l...</div></div></div></a><a class="pagination-related" href="/2026/01/14/20240114/" title="VSCode修改terminal颜色"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-14</div><div class="info-item-2">VSCode修改terminal颜色</div></div><div class="info-2"><div class="info-item-1">vscode终端背景颜色修改以及报错信息颜色修改 转自： https://blog.csdn.net/m0_73832962/article/details/132202467， 侵犯 这里提供vscode终端背景颜色的修改和vscode终端报错提示信息颜色的修改方法 (1)vscode终端背景颜色优化步骤一，ctrl+shift+p打开设置搜索workbench然后点击打开下图的红色箭头指出文件  步骤二，文件拖到最后找到红框内容  步骤3，点击这个链接Base16 Terminal Colors for Visual Studio Code选择喜欢的风格，然后点击复制  复制的信息粘贴到步骤二图中的大括号中就好了，然后保存 12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879&quot;terminal.background&quot...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">52</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#twoPhaseEulerFoam-%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89"><span class="toc-number">1.</span> <span class="toc-text">twoPhaseEulerFoam 全解读之三</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-alphaEqn"><span class="toc-number">1.1.</span> <span class="toc-text">2.3. alphaEqn</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E8%A1%A5%E5%85%85%E8%AF%B4%E6%98%8E"><span class="toc-number">1.2.</span> <span class="toc-text">3. 补充说明</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-kineticTheory"><span class="toc-number">1.2.1.</span> <span class="toc-text">3.1 kineticTheory</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-g0"><span class="toc-number">1.2.2.</span> <span class="toc-text">3.2 g0</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-packingLimiter"><span class="toc-number">1.2.3.</span> <span class="toc-text">3.3 packingLimiter</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">1.3.</span> <span class="toc-text">参考资料</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/" title="C++ 中派生类引用与基类引用的隐式转换">C++ 中派生类引用与基类引用的隐式转换</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例">OpenFOAM 中求解 ODE 一例</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制">OpenFOAM 中的 Run Time Selection 机制</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'all',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || '1cc6fc1781541249d4c0c0630f94b200'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

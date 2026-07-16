@@ -1,0 +1,351 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>OpenFOAM-3.0 的湍流模型（二） | Sui's Blog</title><meta name="author" content="M Sui"><meta name="copyright" content="M Sui"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="OpenFOAM-3.0 的湍流模型（二）转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇分析 OpenFOAM-3.0 中湍流模型的 RTS 机制。RTS 机制主要是通过调用几个相关的宏函数来实现的，所以，分析 RTS 机制需要将相关的宏函数展开。四类湍流模型，机制是类似的，这里以单">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OpenFOAM-3.0 的湍流模型（二）">
+<meta property="og:url" content="http://example.com/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89/index.html">
+<meta property="og:site_name" content="Sui&#39;s Blog">
+<meta property="og:description" content="OpenFOAM-3.0 的湍流模型（二）转自：https:&#x2F;&#x2F;xiaopingqiu.github.io&#x2F;，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇分析 OpenFOAM-3.0 中湍流模型的 RTS 机制。RTS 机制主要是通过调用几个相关的宏函数来实现的，所以，分析 RTS 机制需要将相关的宏函数展开。四类湍流模型，机制是类似的，这里以单">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-07-16T08:46:34.000Z">
+<meta property="article:modified_time" content="2026-07-16T08:49:18.427Z">
+<meta property="article:author" content="M Sui">
+<meta property="article:tag" content="其他">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "OpenFOAM-3.0 的湍流模型（二）",
+  "url": "http://example.com/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89/",
+  "image": "http://example.com/img/butterfly-icon.png",
+  "datePublished": "2026-07-16T08:46:34.000Z",
+  "dateModified": "2026-07-16T08:49:18.427Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "M Sui",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.3"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'OpenFOAM-3.0 的湍流模型（二）',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.1"></head><body><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Sui's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">OpenFOAM-3.0 的湍流模型（二）</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">OpenFOAM-3.0 的湍流模型（二）</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-16T08:49:18.427Z" title="更新于 2026-07-16 10:49:18">2026-07-16</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><h1 id="OpenFOAM-3-0-的湍流模型（二）"><a href="#OpenFOAM-3-0-的湍流模型（二）" class="headerlink" title="OpenFOAM-3.0 的湍流模型（二）"></a>OpenFOAM-3.0 的湍流模型（二）</h1><p>转自：<a target="_blank" rel="noopener" href="https://xiaopingqiu.github.io/%EF%BC%8C%E4%BE%B5%E5%88%A0">https://xiaopingqiu.github.io/，侵删</a></p>
+<p>仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里<br>本篇分析 OpenFOAM-3.0 中湍流模型的 RTS 机制。RTS 机制主要是通过调用几个相关的宏函数来实现的，所以，分析 RTS 机制需要将相关的宏函数展开。四类湍流模型，机制是类似的，这里以单相不可压缩湍流模型为例，后文会给出所有其他湍流模型相关的宏函数的展开结果，供读者参考。<br>RTS 机制的基础这里不再重复了，读者若对这里涉及到 RTS 机制的名称感兴趣，可以参考我以前对 RTS 机制的解读。</p>
+<h5 id="2-RTS-机制"><a href="#2-RTS-机制" class="headerlink" title="2. RTS 机制"></a>2. RTS 机制</h5><p>单相不可压缩湍流模型类，在 <code>Make/files</code> 文件里包含的其中一个是 <code>src/TurbulenceModels/incompressible/turbulentTransportModels/turbulentTransportModels.C</code> turbulentTransportModels.C，这个文件里包含了一些通用的湍流模型模板类，并调用了一些宏函数来实现 RTS 相关的，这里将宏函数展开看看这个文件究竟实现了怎样的功能。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br></pre></td><td class="code"><pre><span class="line">makeBaseTurbulenceModel</span><br><span class="line">(</span><br><span class="line">    geometricOneField,</span><br><span class="line">    geometricOneField,</span><br><span class="line">    incompressibleTurbulenceModel,</span><br><span class="line">    IncompressibleTurbulenceModel,</span><br><span class="line">    transportModel</span><br><span class="line">);</span><br><span class="line">#define makeRASModel(Type)                                                     \</span><br><span class="line">    makeTemplatedTurbulenceModel                                               \</span><br><span class="line">    (transportModelIncompressibleTurbulenceModel, RAS, Type)</span><br><span class="line"></span><br><span class="line">#define makeLESModel(Type)                                                     \</span><br><span class="line">    makeTemplatedTurbulenceModel                                               \</span><br><span class="line">    (transportModelIncompressibleTurbulenceModel, LES, Type)</span><br><span class="line"></span><br><span class="line">// -------------------------------------------------------------------------- //</span><br><span class="line">// RAS models</span><br><span class="line">// -------------------------------------------------------------------------- //</span><br><span class="line">#include &quot;SpalartAllmaras.H&quot;</span><br><span class="line">makeRASModel(SpalartAllmaras);</span><br><span class="line"></span><br><span class="line">#include &quot;kEpsilon.H&quot;</span><br><span class="line">makeRASModel(kEpsilon);</span><br><span class="line"></span><br><span class="line">#include &quot;RNGkEpsilon.H&quot;</span><br><span class="line">makeRASModel(RNGkEpsilon);</span><br><span class="line"></span><br><span class="line">#include &quot;realizableKE.H&quot;</span><br><span class="line">makeRASModel(realizableKE);</span><br><span class="line"></span><br><span class="line">#include &quot;LaunderSharmaKE.H&quot;</span><br><span class="line">makeRASModel(LaunderSharmaKE);</span><br><span class="line"></span><br><span class="line">#include &quot;kOmega.H&quot;</span><br><span class="line">makeRASModel(kOmega);</span><br><span class="line"></span><br><span class="line">#include &quot;kOmegaSST.H&quot;</span><br><span class="line">makeRASModel(kOmegaSST);</span><br><span class="line"></span><br><span class="line">#include &quot;kOmegaSSTSAS.H&quot;</span><br><span class="line">makeRASModel(kOmegaSSTSAS);</span><br><span class="line"></span><br><span class="line">#include &quot;v2f.H&quot;</span><br><span class="line">makeRASModel(v2f);</span><br><span class="line"></span><br><span class="line">#include &quot;LRR.H&quot;</span><br><span class="line">makeRASModel(LRR);</span><br><span class="line"></span><br><span class="line">#include &quot;SSG.H&quot;</span><br><span class="line">makeRASModel(SSG);</span><br><span class="line"></span><br><span class="line">// -------------------------------------------------------------------------- //</span><br><span class="line">// LES models</span><br><span class="line">// -------------------------------------------------------------------------- //</span><br><span class="line">#include &quot;Smagorinsky.H&quot;</span><br><span class="line">makeLESModel(Smagorinsky);</span><br><span class="line"></span><br><span class="line">#include &quot;WALE.H&quot;</span><br><span class="line">makeLESModel(WALE);</span><br><span class="line"></span><br><span class="line">#include &quot;dynamicLagrangian.H&quot;</span><br><span class="line">makeLESModel(dynamicLagrangian);</span><br><span class="line"></span><br><span class="line">#include &quot;kEqn.H&quot;</span><br><span class="line">makeLESModel(kEqn);</span><br><span class="line"></span><br><span class="line">#include &quot;dynamicKEqn.H&quot;</span><br><span class="line">makeLESModel(dynamicKEqn);</span><br><span class="line"></span><br><span class="line">#include &quot;SpalartAllmarasDES.H&quot;</span><br><span class="line">makeLESModel(SpalartAllmarasDES);</span><br><span class="line"></span><br><span class="line">#include &quot;SpalartAllmarasDDES.H&quot;</span><br><span class="line">makeLESModel(SpalartAllmarasDDES);</span><br><span class="line"></span><br><span class="line">#include &quot;SpalartAllmarasIDDES.H&quot;</span><br><span class="line">makeLESModel(SpalartAllmarasIDDES);</span><br><span class="line"></span><br><span class="line">#include &quot;DeardorffDiffStress.H&quot;</span><br><span class="line">makeLESModel(DeardorffDiffStress);</span><br><span class="line"></span><br><span class="line">#include &quot;kOmegaSSTDES.H&quot;</span><br><span class="line">makeLESModel(kOmegaSSTDES);</span><br><span class="line"></span><br><span class="line">#include &quot;kOmegaSSTDDES.H&quot;</span><br><span class="line">makeLESModel(kOmegaSSTDDES);</span><br><span class="line"></span><br><span class="line">#include &quot;kOmegaSSTIDDES.H&quot;</span><br><span class="line">makeLESModel(kOmegaSSTIDDES);</span><br></pre></td></tr></table></figure>
+
+<p>这个宏函数调用</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">makeBaseTurbulenceModel</span><br><span class="line">(</span><br><span class="line">    geometricOneField,</span><br><span class="line">    geometricOneField,</span><br><span class="line">    incompressibleTurbulenceModel,</span><br><span class="line">    IncompressibleTurbulenceModel,</span><br><span class="line">    transportModel</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+
+
+<p>展开结果为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">namespace Foam                                                             </span><br><span class="line">&#123;                                                                          </span><br><span class="line">    typedef TurbulenceModel                                                </span><br><span class="line">    &lt;                                                                      </span><br><span class="line">        geometricOneField,                                                             </span><br><span class="line">        geometricOneField,                                                               </span><br><span class="line">        incompressibleTurbulenceModel,                                                         </span><br><span class="line">        transportModel                                                          </span><br><span class="line">    &gt; transportModelincompressibleTurbulenceModel;                                                </span><br><span class="line">                                                                           </span><br><span class="line">    defineTemplateRunTimeSelectionTable // 对TurbulenceModel类中定义的 hashTable 进行了初始化                                    </span><br><span class="line">    (                                                                      </span><br><span class="line">        transportModelincompressibleTurbulenceModel,                                              </span><br><span class="line">        dictionary                                                         </span><br><span class="line">    );                                                                     </span><br><span class="line">                                                                           </span><br><span class="line">    typedef IncompressibleTurbulenceModel&lt;transportModel&gt; transportModelIncompressibleTurbulenceModel;                     </span><br><span class="line">                                                                           </span><br><span class="line">    typedef laminar&lt;transportModelIncompressibleTurbulenceModel&gt; LaminartransportModelIncompressibleTurbulenceModel;   </span><br><span class="line">                                                                           </span><br><span class="line">    defineNamedTemplateTypeNameAndDebug(LaminartransportModelIncompressibleTurbulenceModel, 0); </span><br><span class="line">                                                                           </span><br><span class="line">    addToRunTimeSelectionTable   // 将laminar 模型加到定义在 TurbulenceModel 类中的hashTable                                      </span><br><span class="line">    (                                                                      </span><br><span class="line">        transportModelincompressibleTurbulenceModel,                                              </span><br><span class="line">        LaminartransportModelIncompressibleTurbulenceModel,                                     </span><br><span class="line">        dictionary                                                         </span><br><span class="line">    );                                                                     </span><br><span class="line">                                                                           </span><br><span class="line">    typedef RASModel&lt;transportModelIncompressibleTurbulenceModel&gt; RAStransportModelIncompressibleTurbulenceModel;      </span><br><span class="line">    </span><br><span class="line">    defineNamedTemplateTypeNameAndDebug(RAStransportModelIncompressibleTurbulenceModel, 0);     </span><br><span class="line"></span><br><span class="line">     // 对 RASModel类中定义的hashTable进行了初始化                          </span><br><span class="line">    defineTemplateRunTimeSelectionTable                                    </span><br><span class="line">    (RAStransportModelIncompressibleTurbulenceModel, dictionary);                               </span><br><span class="line">    // 将 RASModel 添加到 TurbulenceModel 中定义的hashTable                         </span><br><span class="line">    addToRunTimeSelectionTable                                             </span><br><span class="line">    (                                                                      </span><br><span class="line">        transportModelincompressibleTurbulenceModel,                                              </span><br><span class="line">        RAStransportModelIncompressibleTurbulenceModel,                                         </span><br><span class="line">        dictionary                                                         </span><br><span class="line">    );                                                                     </span><br><span class="line">                                                                           </span><br><span class="line">    typedef LESModel&lt;transportModelIncompressibleTurbulenceModel&gt; LEStransportModelIncompressibleTurbulenceModel;      </span><br><span class="line">                                                                           </span><br><span class="line">    defineNamedTemplateTypeNameAndDebug(LEStransportModelIncompressibleTurbulenceModel, 0);     </span><br><span class="line">    </span><br><span class="line">     // 对LESModel类中定义的hashTable进行了初始化</span><br><span class="line">    defineTemplateRunTimeSelectionTable                                    </span><br><span class="line">    (LEStransportModelIncompressibleTurbulenceModel, dictionary);                               </span><br><span class="line">    // 将 LESModel 添加到 TurbulenceModel 中定义的hashTable                   </span><br><span class="line">    addToRunTimeSelectionTable                                             </span><br><span class="line">    (                                                                      </span><br><span class="line">        transportModelincompressibleTurbulenceModel,                                              </span><br><span class="line">        LEStransportModelIncompressibleTurbulenceModel,                                         </span><br><span class="line">        dictionary                                                         </span><br><span class="line">    );                                                                     </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>makeRASModel(SpalartAllmaras)</code> 展开结果为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">makeTemplatedTurbulenceModel </span><br><span class="line"> (transportModelIncompressibleTurbulenceModel, RAS, SpalartAllmaras)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>继续展开结果为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">defineNamedTemplateTypeNameAndDebug                      </span><br><span class="line">    (Foam::RASModels::SpalartAllmaras&lt;Foam::transportModelIncompressibleTurbulenceModel&gt;, 0);     </span><br><span class="line">                                                         </span><br><span class="line">namespace Foam                                           </span><br><span class="line">&#123;                                                        </span><br><span class="line">    namespace RASModels                              </span><br><span class="line">    &#123;                                                    </span><br><span class="line">        typedef SpalartAllmaras&lt;transportModelIncompressibleTurbulenceModel&gt; SpalartAllmarasRAStransportModelIncompressibleTurbulenceModel;  </span><br><span class="line">                                                         </span><br><span class="line">	// 将 SpalartAllmaras 模型添加到 RASModel 中定义的 hashTable</span><br><span class="line">        addToRunTimeSelectionTable                       </span><br><span class="line">        (                                                </span><br><span class="line">            RAStransportModelIncompressibleTurbulenceModel,                            </span><br><span class="line">            SpalartAllmarasRAStransportModelIncompressibleTurbulenceModel,                      </span><br><span class="line">            dictionary                                   </span><br><span class="line">        );                                               </span><br><span class="line">    &#125;                                                    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>makeLESModel(Smagorinsky)</code> 展开结果为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">makeTemplatedTurbulenceModel </span><br><span class="line"> (transportModelIncompressibleTurbulenceModel, LES, Smagorinsky)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>继续展开结果为</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">defineNamedTemplateTypeNameAndDebug                      </span><br><span class="line">    (Foam::LESModels::Smagorinsky&lt;Foam::transportModelIncompressibleTurbulenceModel&gt;, 0);     </span><br><span class="line">                                                         </span><br><span class="line">namespace Foam                                           </span><br><span class="line">&#123;                                                        </span><br><span class="line">    namespace LESModels                              </span><br><span class="line">    &#123;                                                    </span><br><span class="line">        typedef Smagorinsky&lt;transportModelIncompressibleTurbulenceModel&gt; SmagorinskyLEStransportModelIncompressibleTurbulenceModel;  </span><br><span class="line">                                                         </span><br><span class="line">	// 将 Smagorinsky 模型添加到 LESModel 中定义的hashTable</span><br><span class="line">        addToRunTimeSelectionTable                       </span><br><span class="line">        (                                                </span><br><span class="line">            LEStransportModelIncompressibleTurbulenceModel,                            </span><br><span class="line">            SmagorinskyLEStransportModelIncompressibleTurbulenceModel,                      </span><br><span class="line">            dictionary                                   </span><br><span class="line">        );                                               </span><br><span class="line">    &#125;                                                    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意，这里给 <code>kEpsilon</code> 和 <code>Smagorinsky</code> 模型代入的模板参数是 <code>transportModelIncompressibleTurbulenceModel</code>，即 <code>IncompressibleTurbulenceModel&lt;transportModel&gt;</code>。</p>
+<p>上面给出了单相不可压缩湍流模型是如何添加到各自该所属的 hashTable 里的。接着，以单相不可压缩模型为例，看看湍流模型的调用过程。<br>在 <code>pisoFoam</code> 求解器中，湍流模型接口的定义如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">autoPtr&lt;incompressible::turbulenceModel&gt; turbulence</span><br><span class="line">(</span><br><span class="line">    incompressible::turbulenceModel::New(U, phi, laminarTransport)</span><br><span class="line">);</span><br><span class="line">// laminarTransport 是 singlePhaseTransportModel 的一个对象</span><br></pre></td></tr></table></figure>
+
+
+
+<p><code>incompressible::turbulenceModel</code> 是 <code>IncompressibleTurbulenceModel&lt;transportModel&gt;</code> 的别名。<br>这里调用的是 <code>IncompressibleTurbulenceModel</code> 类的 <code>New</code> 函数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">template&lt;class TransportModel&gt;</span><br><span class="line">Foam::autoPtr&lt;Foam::IncompressibleTurbulenceModel&lt;TransportModel&gt; &gt;</span><br><span class="line">Foam::IncompressibleTurbulenceModel&lt;TransportModel&gt;::New</span><br><span class="line">(</span><br><span class="line">    const volVectorField&amp; U,</span><br><span class="line">    const surfaceScalarField&amp; phi,</span><br><span class="line">    const TransportModel&amp; transport,</span><br><span class="line">    const word&amp; propertiesName</span><br><span class="line">)</span><br><span class="line">&#123;</span><br><span class="line">    return autoPtr&lt;IncompressibleTurbulenceModel&gt;</span><br><span class="line">    (</span><br><span class="line">        static_cast&lt;IncompressibleTurbulenceModel*&gt;(</span><br><span class="line">        TurbulenceModel</span><br><span class="line">        &lt;</span><br><span class="line">            geometricOneField,</span><br><span class="line">            geometricOneField,</span><br><span class="line">            incompressibleTurbulenceModel,</span><br><span class="line">            TransportModel</span><br><span class="line">        &gt;::New</span><br><span class="line">        (</span><br><span class="line">            geometricOneField(),</span><br><span class="line">            geometricOneField(),</span><br><span class="line">            U,</span><br><span class="line">            phi,</span><br><span class="line">            phi,</span><br><span class="line">            transport,</span><br><span class="line">            propertiesName</span><br><span class="line">        ).ptr())</span><br><span class="line">    );</span><br></pre></td></tr></table></figure>
+
+
+
+<p>返回的是 <code>TurbulenceModel</code> 类的 <code>New</code> 函数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">template</span><br><span class="line">&lt;</span><br><span class="line">    class Alpha,</span><br><span class="line">    class Rho,</span><br><span class="line">    class BasicTurbulenceModel,</span><br><span class="line">    class TransportModel</span><br><span class="line">&gt;</span><br><span class="line">Foam::autoPtr</span><br><span class="line">&lt;</span><br><span class="line">    Foam::TurbulenceModel&lt;Alpha, Rho, BasicTurbulenceModel, TransportModel&gt;</span><br><span class="line">&gt;</span><br><span class="line">Foam::TurbulenceModel&lt;Alpha, Rho, BasicTurbulenceModel, TransportModel&gt;::New</span><br><span class="line">(</span><br><span class="line">    const alphaField&amp; alpha,</span><br><span class="line">    const rhoField&amp; rho,</span><br><span class="line">    const volVectorField&amp; U,</span><br><span class="line">    const surfaceScalarField&amp; alphaRhoPhi,</span><br><span class="line">    const surfaceScalarField&amp; phi,</span><br><span class="line">    const transportModel&amp; transport,</span><br><span class="line">    const word&amp; propertiesName</span><br><span class="line">)</span><br><span class="line">&#123;</span><br><span class="line">    // get model name, but do not register the dictionary</span><br><span class="line">    // otherwise it is registered in the database twice</span><br><span class="line">    const word modelType</span><br><span class="line">    (</span><br><span class="line">        IOdictionary</span><br><span class="line">        (</span><br><span class="line">            IOobject</span><br><span class="line">            (</span><br><span class="line">                IOobject::groupName(propertiesName, U.group()),</span><br><span class="line">                U.time().constant(),</span><br><span class="line">                U.db(),</span><br><span class="line">                IOobject::MUST_READ_IF_MODIFIED,</span><br><span class="line">                IOobject::NO_WRITE,</span><br><span class="line">                false</span><br><span class="line">            )</span><br><span class="line">        ).lookup(&quot;simulationType&quot;)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    Info&lt;&lt; &quot;Selecting turbulence model type &quot; &lt;&lt; modelType &lt;&lt; endl;</span><br><span class="line"></span><br><span class="line">    typename dictionaryConstructorTable::iterator cstrIter =</span><br><span class="line">        dictionaryConstructorTablePtr_-&gt;find(modelType);</span><br><span class="line"></span><br><span class="line">    if (cstrIter == dictionaryConstructorTablePtr_-&gt;end())</span><br><span class="line">    &#123;</span><br><span class="line">        FatalErrorInFunction</span><br><span class="line">            &lt;&lt; &quot;Unknown TurbulenceModel type &quot;</span><br><span class="line">            &lt;&lt; modelType &lt;&lt; nl &lt;&lt; nl</span><br><span class="line">            &lt;&lt; &quot;Valid TurbulenceModel types:&quot; &lt;&lt; endl</span><br><span class="line">            &lt;&lt; dictionaryConstructorTablePtr_-&gt;sortedToc()</span><br><span class="line">            &lt;&lt; exit(FatalError);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return autoPtr&lt;TurbulenceModel&gt;</span><br><span class="line">    (</span><br><span class="line">        cstrIter()(alpha, rho, U, alphaRhoPhi, phi, transport, propertiesName)</span><br><span class="line">    );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这里通过读取 <code>turbulenceProperties</code> 文件，查找关键字 <code>simulationType</code>（只能是 <code>RAS</code> 或 <code>LES</code> ），并据此从定义在 <code>TurbulenceModel</code> 类中 hashTable 中找对应的模型，然后返回的模型（可能是 <code>RAStransportModelIncompressibleTurbulenceModel</code>， <code>RASfluidThermoCompressibleTurbulenceModel</code>， <code>RASsinglePhaseTransportModelPhaseIncompressibleTurbulenceModel</code>， <code>RASphaseModelPhaseCompressibleTurbulenceModel</code>）的 <code>New</code> 函数</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">template&lt;class BasicTurbulenceModel&gt;</span><br><span class="line">Foam::autoPtr&lt;Foam::RASModel&lt;BasicTurbulenceModel&gt; &gt;</span><br><span class="line">Foam::RASModel&lt;BasicTurbulenceModel&gt;::New</span><br><span class="line">(</span><br><span class="line">    const alphaField&amp; alpha,</span><br><span class="line">    const rhoField&amp; rho,</span><br><span class="line">    const volVectorField&amp; U,</span><br><span class="line">    const surfaceScalarField&amp; alphaRhoPhi,</span><br><span class="line">    const surfaceScalarField&amp; phi,</span><br><span class="line">    const transportModel&amp; transport,</span><br><span class="line">    const word&amp; propertiesName</span><br><span class="line">)</span><br><span class="line">&#123;</span><br><span class="line">    // get model name, but do not register the dictionary</span><br><span class="line">    // otherwise it is registered in the database twice</span><br><span class="line">    const word modelType</span><br><span class="line">    (</span><br><span class="line">        IOdictionary</span><br><span class="line">        (</span><br><span class="line">            IOobject</span><br><span class="line">            (</span><br><span class="line">                IOobject::groupName(propertiesName, U.group()),</span><br><span class="line">                U.time().constant(),</span><br><span class="line">                U.db(),</span><br><span class="line">                IOobject::MUST_READ_IF_MODIFIED,</span><br><span class="line">                IOobject::NO_WRITE,</span><br><span class="line">                false</span><br><span class="line">            )</span><br><span class="line">        ).subDict(&quot;RAS&quot;).lookup(&quot;RASModel&quot;)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    Info&lt;&lt; &quot;Selecting RAS turbulence model &quot; &lt;&lt; modelType &lt;&lt; endl;</span><br><span class="line"></span><br><span class="line">    typename dictionaryConstructorTable::iterator cstrIter =</span><br><span class="line">        dictionaryConstructorTablePtr_-&gt;find(modelType);</span><br><span class="line"></span><br><span class="line">    if (cstrIter == dictionaryConstructorTablePtr_-&gt;end())</span><br><span class="line">    &#123;</span><br><span class="line">        FatalErrorInFunction</span><br><span class="line">            &lt;&lt; &quot;Unknown RASModel type &quot;</span><br><span class="line">            &lt;&lt; modelType &lt;&lt; nl &lt;&lt; nl</span><br><span class="line">            &lt;&lt; &quot;Valid RASModel types:&quot; &lt;&lt; endl</span><br><span class="line">            &lt;&lt; dictionaryConstructorTablePtr_-&gt;sortedToc()</span><br><span class="line">            &lt;&lt; exit(FatalError);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return autoPtr&lt;RASModel&gt;</span><br><span class="line">    (</span><br><span class="line">        cstrIter()(alpha, rho, U, alphaRhoPhi, phi, transport, propertiesName)</span><br><span class="line">    );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>这个 <code>New</code> 函数中需要读取 <code>RAS</code> 子字典，从中读取 <code>RASModel</code> 关键字，并据此从定义在 <code>RASModel</code> 类中的 hashTable 中查找到对应的湍流模型，并返回湍流模型的构造函数</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> return autoPtr&lt;RASModel&gt;</span><br><span class="line">(</span><br><span class="line">    cstrIter()(alpha, rho, U, alphaRhoPhi, phi, transport, propertiesName)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+
+
+<p>其他三类湍流模型，机制是类似的，这里不再详述，仅给出三个链接，供大家参考：<a target="_blank" rel="noopener" href="http://www.evernote.com/l/AYvnAYRFNFNM-bJC82rVLGiBybePgFNMF4o/">单相可压缩湍流模型</a>，<a target="_blank" rel="noopener" href="http://www.evernote.com/l/AYsCXim6tA9DuYjdWDxPSTmltaMig6GIl5A/">多相不可压缩湍流模型</a>，<a target="_blank" rel="noopener" href="http://www.evernote.com/l/AYuP9x_D59FCPbFXFTY97LbV__jBebUzW8A/">多相可压缩湍流模型</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">M Sui</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89/">http://example.com/2026/07/16/OpenFOAM-3.0%20%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Sui's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%85%B6%E4%BB%96/">其他</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20div%20%E4%B8%8E%20snGrad%20%E6%93%8D%E4%BD%9C%E7%AC%A6/" title="OpenFOAM 中的 div 与 snGrad 操作符"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OpenFOAM 中的 div 与 snGrad 操作符</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的 div 与 snGrad 操作符转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里OpenFOAM 的方便之处之一是利用C++的类模板和函数重载等技术定义了很多各种离散操作符，如div,laplacian,grad 等等。利用这些操作符，很容易就能对偏微分方程进行离散，并构建起线性方程组。但是，这些操作符真正执行的运算，却需要结合有限体积方法的本质来理解一番才能真正掌握。下面尝试着对 OpenFOAM 中的 div 和 snGrad 操作符进行一点解读。 1. div 操作符的本质div操作符表面看，是计算散度的，实际上，在OpenFAOM中，div 操作符的作用是加和，比如说 $ \nabla \cdot (UU)$，在OpenFOAM中表示为fvm::div(phi,U)，这段代码真正执行的是$\sum_f U_f \phi_f$运算，即将每个网格包含的面上的流率与速度乘积，然后再加起来。再比如，twoPhaseEulerFoam的UaEqn方程...</div></div></div></a><a class="pagination-related" href="/2026/07/16/foamTimeAverage/" title="foamTimeAverage"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">foamTimeAverage</div></div><div class="info-2"><div class="info-item-1">foamTimeAverage转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里在前面的一篇博文中，我介绍了fieldAverage这个functionObject的用法，其中提到， 可以用window这个参数来控制所计算的时均值的时间范围。如果 base = time且window = 10，那从第10s以后，每个时刻 t 输出的时均值其实相当于从 t-10 到 t 这个时间段内的时均值。但是，根据分析可以发现，这个时均值并不严格等价于从 t-10 时刻到 t 时刻某个场的时均值。有时候，需要从某个时刻才开始计算时均值，而fieldAverage没有参数可以控制从某个时刻才开始计算时间平均。于是我参照OpenFOAM的patchAverage.C的代码写了一个后处理程序，用来计算指定时间段内的某个场的时均值。 foamTimeAverage 简介foamTimeAverage 是一段简单的后处理程序，其功能是在算例运行结束以后，根据指定的时间段，从数据文件夹里循环读入指定...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/07/16/OpenFOAM-2.3.x%20%E4%B8%AD%E7%9A%84%20twoPhaseEulerFoam%20%E8%A7%A3%E6%9E%90%E4%B9%8B%20TurbulenceModel/" title="OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 TurbulenceModel"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 TurbulenceModel</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 TurbulenceModel转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里在 kineticTheoryModel 类的解读时前面提到过， kineticTheoryModel 使用了跟湍流模型一样的接口。这一篇，就来看一下 twoPhaseEulerFoam 中的湍流模型。 OpenFOAM-2.3.x 中的twoPhaseEulerFoam 流体相可以调用 RAS 和 LES 湍流模型，固相可以使用两种计算固相应力的“湍流模型”。湍流模型的调用是通过 phaseModel 来进行的，具体的过程放到最后来讲，这里先说一下最重要的 divDevRhoReff 函数的形式，主要有三种类型：用于固相的 phasePressure 和 kineticTheoryModel 以及用于流体相的 RAS 模型或 LES 模型，以 kEpsilon 模型为例。此外，在”pEqn.H”里，还需要用到 pP...</div></div></div></a><a class="pagination-related" href="/2026/07/16/twoPhaseEulerFoam%20%E5%85%A8%E8%A7%A3%E8%AF%BB%E4%B9%8B%E4%B8%89/" title="twoPhaseEulerFoam 全解读之三"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">twoPhaseEulerFoam 全解读之三</div></div><div class="info-2"><div class="info-item-1">twoPhaseEulerFoam 全解读之三转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本系列将对OpenFOAM-2.1.1 中的 twoPhaseEulerFoam 求解器进行完全解读，共分三部分：方程推导，代码解读，补充说明。本篇对 twoPhaseEulerFoam 中的 alphaEqn.H 进行详细地的解读，并作一些补充说明。 2.3. alphaEqn前文提到，经过求解 pEqn，并修正速度Ua和Ub以后，总体的连续性便得到了保证。为了得到分散相的体积分率alpha，还需要利用得到的速度场来求解分散相的连续性方程，即alphaEqn。分散相连续性方程可以表达如下：$$\frac{\partial \alpha_a}{\partial t}+\nabla \cdot (\alpha_a U_a)&#x3D;0$$ 为了让每一项都写成守恒形式，并且保证$\alpha_a$的有界性，Weller 将分散相连续性方程写成如下形式$$\frac{\partial...</div></div></div></a><a class="pagination-related" href="/2026/07/16/LES%20%E4%B8%AD%E7%9A%84%20commutation%20error/" title="LES 中的 commutation error"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">LES 中的 commutation error</div></div><div class="info-2"><div class="info-item-1">LES 中的 commutation error转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里 大涡模拟不仅对网格的解析度有要求，而且对网格质量也有更高的要求。本文介绍一种由网格带来的误差，commutation error，并简单分析其对结果的影响。 在 LES 模拟的程序中，常用的一种过滤方法是隐式过滤，即，用当地网格的尺度作为该处的过滤尺度。这种方法在各种类型的网格上实现起来都相对简单。只是，稍微复杂一点的几何构体，生成的网格的尺度总是不可能一样，这也就意味着过滤尺度是变化的。如果相邻网格的尺度变化很大，这也将引起相邻网格的过滤尺度相差很大，这时就会带来严重的 commutation error。 Commutation error 产生的根本原因是，当相邻网格过滤尺度不一样时，，$\overline{\tfrac{\partial \phi}{\partial x}} \neq \tfrac{\partial \overline{\phi}}{\partial ...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的单相流湍流模型之SpalartAllmaras转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇简要分析不可压缩的 SpalartAllmaras 模型的代码。主要内容包括模型输运方程的代码说明，以及一些使用方面的细节。 湍流模型代码实例这一部分分析几个 OpenFOAM 里自带的湍流模型， 并探讨修改或者添加新湍流模型的方法。 1 SpalartAllmaras 模型1.1. 模型分析SpalartAllmaras 模型是一方程模型，它只需要求解一个输运方程。OpenFOAM 中的 SpalartAllmaras 模型是在原始论文[1] 的基础上，引入了 Ashford [2] 对这个模型的修正。下面来看这个模型在 OpenFOAM 中的实现，代码位于 src/turbulenceModels/incompressible/RAS/SpalartAllmaras首先是头文件， SpalartAllmaras.H头文件开始，声明了一个类：Spala...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E8%BE%B9%E7%95%8C%E6%9D%A1%E4%BB%B6%EF%BC%88%E4%BA%8C%EF%BC%89/" title="OpenFOAM 中的边界条件（二）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM 中的边界条件（二）</div></div><div class="info-2"><div class="info-item-1">OpenFOAM 中的边界条件（二）转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里本篇在上一篇的基础上来解读 OpenFOAM 中的基础边界条件。基础边界条件一般包括三类，一是Dirichlet 边界，二是 Neumann 边界，三是混合 Dirichlet 和 Neumann 的边界。 1. fixedValue这个是 OpenFOAM 中的 Dirichlet 边界条件。  构造函数 12345678910template&lt;class Type&gt;fixedValueFvPatchField&lt;Type&gt;::fixedValueFvPatchField(    const fvPatch&amp; p,    const DimensionedField&lt;Type, volMesh&gt;&amp; iF,    const dictionary&amp; dict):    fvPatchField&lt;Type&gt;(p, iF, ...</div></div></div></a><a class="pagination-related" href="/2026/07/16/OpenFOAM-2.3.x%20%E4%B8%AD%E7%9A%84%20twoPhaseEulerFoam%20%E8%A7%A3%E6%9E%90%E4%B9%8B%20kineticTheoryModel/" title="OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-16</div><div class="info-item-2">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel</div></div><div class="info-2"><div class="info-item-1">OpenFOAM-2.3.x 中的 twoPhaseEulerFoam 解析之 kineticTheoryModel转自：https://xiaopingqiu.github.io/，侵删 仅仅觉得都挺有用的，所以转发一下。仅仅是想做个备份，希望不要某天淹没在互联网的长河里OpenFOAM 中双流体模型的 kineticTheoryModel 是以 “ Derivation, implementation, and validation of computer simulation models for gas-solid fluidized beds, B.G.M. van Wachem, Ph.D. Thesis, Delft University of Technology, Amsterdam, 2000. “ 为蓝本来设计的，下面分析这个类的代码。需要注意的是，这个类需要调用一些别的类（如 viscosityModel 等，后面会一一分析）来完成其功能。 1. 头文件 kineticTheoryModel.H头文件中要注意的是 kineticTheoryModel 类的...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="gitalk-container"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">M Sui</div><div class="author-info-description"></div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">52</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Suiiiii"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Suiiiii" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:maohong.sui@outlook.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#OpenFOAM-3-0-%E7%9A%84%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%EF%BC%88%E4%BA%8C%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">OpenFOAM-3.0 的湍流模型（二）</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-RTS-%E6%9C%BA%E5%88%B6"><span class="toc-number">1.1.</span> <span class="toc-text">2. RTS 机制</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/C++%20%E4%B8%AD%E6%B4%BE%E7%94%9F%E7%B1%BB%E5%BC%95%E7%94%A8%E4%B8%8E%E5%9F%BA%E7%B1%BB%E5%BC%95%E7%94%A8%E7%9A%84%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2/" title="C++ 中派生类引用与基类引用的隐式转换">C++ 中派生类引用与基类引用的隐式转换</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%8D%E5%8F%AF%E5%8E%8B%E7%BC%A9%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E7%9A%84%20divDevReff%20%E5%87%BD%E6%95%B0/" title="OpenFOAM 不可压缩湍流模型的 divDevReff 函数">OpenFOAM 不可压缩湍流模型的 divDevReff 函数</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E6%B1%82%E8%A7%A3%20ODE%20%E4%B8%80%E4%BE%8B/" title="OpenFOAM 中求解 ODE 一例">OpenFOAM 中求解 ODE 一例</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%20Run%20Time%20Selection%20%E6%9C%BA%E5%88%B6/" title="OpenFOAM 中的 Run Time Selection 机制">OpenFOAM 中的 Run Time Selection 机制</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/16/OpenFOAM%20%E4%B8%AD%E7%9A%84%E5%8D%95%E7%9B%B8%E6%B5%81%E6%B9%8D%E6%B5%81%E6%A8%A1%E5%9E%8B%E4%B9%8BSpalartAllmaras/" title="OpenFOAM 中的单相流湍流模型之SpalartAllmaras">OpenFOAM 中的单相流湍流模型之SpalartAllmaras</a><time datetime="2026-07-16T08:46:34.000Z" title="发表于 2026-07-16 10:46:34">2026-07-16</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By M Sui</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.3</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.3"></script><script src="/js/main.js?v=5.5.3"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'all',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const commentCount = n => {
+    const isCommentCount = document.querySelector('#post-meta .gitalk-comment-count')
+    if (isCommentCount) {
+      isCommentCount.textContent= n
+    }
+  }
+
+  const initGitalk = (el, path) => {
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGitalk = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+
+    const gitalk = new Gitalk({
+      clientID: 'Ov23liupQAH0PzH4YuTV',
+      clientSecret: '3cd5b7da10062fa126efbce9e8b306ea792c38b2',
+      repo: 'hexo-comment',
+      owner: 'Suiiiii',
+      admin: ['Suiiiii'],
+      updateCountCallback: commentCount,
+      ...option,
+      id: isShuoshuo ? path : (option && option.id) || 'a158840d2ff44c95fed1a812b2721235'
+    })
+
+    gitalk.render('gitalk-container')
+  }
+
+  const loadGitalk = async(el, path) => {
+    if (typeof Gitalk === 'function') initGitalk(el, path)
+    else {
+      await btf.getCSS('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.css')
+      await btf.getScript('https://cdn.jsdelivr.net/npm/gitalk@1.8.0/dist/gitalk.min.js')
+      initGitalk(el, path)
+    }
+  }
+
+  if (isShuoshuo) {
+    'Gitalk' === 'Gitalk'
+      ? window.shuoshuoComment = { loadComment: loadGitalk }
+      : window.loadOtherComment = loadGitalk
+    return
+  }
+
+  if ('Gitalk' === 'Gitalk' || !false) {
+    if (false) btf.loadComment(document.getElementById('gitalk-container'), loadGitalk)
+    else loadGitalk()
+  } else {
+    window.loadOtherComment = loadGitalk
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
